@@ -86,6 +86,15 @@ export const dashboardSchema = z.object({
   popular_slots: z.array(z.object({ start_time: z.string(), bookings: z.number() })),
 });
 
+export const fieldOwnerSchema = z.object({
+  id: z.number(),
+  user_id: z.number(),
+  business_name: z.string(),
+  contact_phone: z.string().nullable(),
+  is_verified: z.boolean(),
+  created_at: z.string(),
+});
+
 export const broadcastSchema = z.object({
   id: z.number(),
   text: z.string(),
@@ -102,6 +111,7 @@ export type User = z.infer<typeof userSchema>;
 export type Role = User["role"];
 export type Field = z.infer<typeof fieldSchema>;
 export type Slot = z.infer<typeof slotSchema>;
+export type FieldOwner = z.infer<typeof fieldOwnerSchema>;
 export type AdminBooking = z.infer<typeof adminBookingSchema>;
 export type BookingStatus = z.infer<typeof bookingStatusEnum>;
 export type Dashboard = z.infer<typeof dashboardSchema>;

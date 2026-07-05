@@ -11,10 +11,12 @@ from app.core.database import AsyncSessionLocal
 from app.core.deps import DBSession, require_role
 from app.models.broadcast import Broadcast
 from app.models.enums import BookingStatus, UserRole
+from app.models.field_owner import FieldOwner
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.booking import AdminBookingOut
 from app.schemas.broadcast import BroadcastCreate, BroadcastOut
+from app.schemas.field_owner import FieldOwnerCreate, FieldOwnerOut, FieldOwnerUpdate
 from app.schemas.user import UserOut
 from app.services.broadcast_service import BroadcastService
 
@@ -84,6 +86,59 @@ async def set_role(user_id: int, role: UserRole, db: DBSession):
 async def delete_user(user_id: int, db: DBSession):
     user = await _get_user(user_id, db)
     await db.delete(user)
+    await db.commit()
+
+
+# --- Field owner profiles ---
+
+
+@router.get("/field-owners", response_model=list[FieldOwnerOut])
+async def list_field_owners(db: DBSession, limit: int = Query(100, le=200)):
+    stmt = select(FieldOwner).order_by(FieldOwner.created_at.desc()).limit(limit)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+async def _get_field_owner(field_owner_id: int, db) -> FieldOwner:
+    owner = await db.get(FieldOwner, field_owner_id)
+    if owner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Field owner not found")
+    return owner
+
+
+@router.post(
+    "/field-owners", response_model=FieldOwnerOut, status_code=status.HTTP_201_CREATED
+)
+async def create_field_owner(body: FieldOwnerCreate, db: DBSession):
+    owner = FieldOwner(**body.model_dump())
+    db.add(owner)
+    await db.commit()
+    await db.refresh(owner)
+    return owner
+
+
+@router.patch("/field-owners/{field_owner_id}", response_model=FieldOwnerOut)
+async def update_field_owner(field_owner_id: int, body: FieldOwnerUpdate, db: DBSession):
+    owner = await _get_field_owner(field_owner_id, db)
+    for key, value in body.model_dump(exclude_unset=True).items():
+        setattr(owner, key, value)
+    await db.commit()
+    await db.refresh(owner)
+    return owner
+
+
+@router.post("/field-owners/{field_owner_id}/verify", response_model=FieldOwnerOut)
+async def verify_field_owner(field_owner_id: int, db: DBSession):
+    owner = await _get_field_owner(field_owner_id, db)
+    owner.is_verified = True
+    await db.commit()
+    await db.refresh(owner)
+    return owner
+
+
+@router.delete("/field-owners/{field_owner_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_field_owner(field_owner_id: int, db: DBSession):
+    owner = await _get_field_owner(field_owner_id, db)
+    await db.delete(owner)
     await db.commit()
 
 

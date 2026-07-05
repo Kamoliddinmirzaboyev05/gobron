@@ -26,6 +26,11 @@ class User(Base):
     )
 
     phone: Mapped[str | None] = mapped_column(String(20), unique=True, index=True)
+
+    # Username + password login (admins / field owners). Players use Telegram.
+    username: Mapped[str | None] = mapped_column(String(50), unique=True, index=True)
+    hashed_password: Mapped[str | None] = mapped_column(String(255))
+
     first_name: Mapped[str | None] = mapped_column(String(80))
     last_name: Mapped[str | None] = mapped_column(String(80))
     region: Mapped[str | None] = mapped_column(String(80))   # viloyat

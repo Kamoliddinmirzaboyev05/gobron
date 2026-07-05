@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_controller.dart';
 import '../../features/auth/login_screen.dart';
-import '../../features/auth/otp_screen.dart';
 import '../../features/fields/models/field.dart';
 import '../../features/fields/presentation/field_form_screen.dart';
 import '../../features/slots/presentation/slots_screen.dart';
@@ -22,17 +21,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final authState = ref.read(authControllerProvider);
       if (authState.isLoading) return null;
       final loggedIn = authState.valueOrNull?.isAuthenticated ?? false;
-      final onAuthRoute = state.matchedLocation == '/' || state.matchedLocation == '/otp';
+      final onAuthRoute = state.matchedLocation == '/';
       if (!loggedIn && !onAuthRoute) return '/';
       if (loggedIn && onAuthRoute) return '/home';
       return null;
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
-      GoRoute(
-        path: '/otp',
-        builder: (context, state) => OtpScreen(phone: state.extra as String),
-      ),
       GoRoute(path: '/home', builder: (context, state) => const HomeShell()),
       GoRoute(
         path: '/fields/new',

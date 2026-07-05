@@ -4,9 +4,10 @@ Uses Pydantic Settings so every value is validated and typed. Never hard-code
 secrets — read them from a local .env file (see .env.example).
 """
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import PostgresDsn, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -30,6 +31,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
 
+    # --- Superadmin seed (used by `python -m app.seed`) ---
+    SUPERADMIN_USERNAME: str = "superadmin"
+    SUPERADMIN_PASSWORD: str = "kamoliddin"
+
     # --- Telegram ---
     TELEGRAM_BOT_TOKEN: str = "change-me"       # from @BotFather
     TMA_URL: str = "http://localhost:5173"       # Mini App URL opened by the bot
@@ -44,7 +49,9 @@ class Settings(BaseSettings):
     OTP_DEV_CODE: str = "111111"
 
     # --- CORS ---
-    CORS_ORIGINS: list[str] = [
+    # NoDecode: don't JSON-parse this from .env; the validator below splits the
+    # comma-separated string instead.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",  # user-web (Next.js)
         "http://localhost:5173",  # superadmin (Vite)
     ]

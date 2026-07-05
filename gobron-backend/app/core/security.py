@@ -55,6 +55,33 @@ def verify_otp(phone: str, code: str) -> bool:
     return True
 
 
+def hash_password(password: str) -> str:
+    """Hash a password with PBKDF2-HMAC-SHA256 (stdlib, no external deps).
+
+    Format: ``pbkdf2_sha256$iterations$salt_hex$hash_hex``.
+    # ponytail: stdlib pbkdf2 avoids a bcrypt/argon2 dependency; swap to argon2
+    # if you need a memory-hard KDF.
+    """
+    iterations = 200_000
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+    return f"pbkdf2_sha256${iterations}${salt.hex()}${dk.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Constant-time check of a password against a stored PBKDF2 hash."""
+    try:
+        algo, iters, salt_hex, hash_hex = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), bytes.fromhex(salt_hex), int(iters)
+        )
+        return secrets.compare_digest(dk.hex(), hash_hex)
+    except (ValueError, AttributeError):
+        return False
+
+
 def _create_token(subject: str, role: str, expires_minutes: int, token_type: str) -> str:
     now = datetime.now(timezone.utc)
     payload = {

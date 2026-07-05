@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   MapPin,
   Users,
+  Briefcase,
   CalendarCheck,
   Megaphone,
   LogOut,
@@ -12,6 +13,7 @@ import { logout } from "../hooks/useAuth";
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/fields", label: "Maydonlar", icon: MapPin, end: false },
+  { to: "/field-owners", label: "Maydon egalari", icon: Briefcase, end: false },
   { to: "/users", label: "Foydalanuvchilar", icon: Users, end: false },
   { to: "/bookings", label: "Bronlar", icon: CalendarCheck, end: false },
   { to: "/broadcasts", label: "E'lonlar", icon: Megaphone, end: false },

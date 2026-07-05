@@ -27,4 +27,8 @@ class UserProfile {
   final bool isActive;
 
   bool get isFieldOwner => role == 'field_owner';
+  bool get isSuperadmin => role == 'superadmin';
+
+  /// Both field owners and superadmins may use the owner app.
+  bool get canManageFields => isFieldOwner || isSuperadmin;
 }

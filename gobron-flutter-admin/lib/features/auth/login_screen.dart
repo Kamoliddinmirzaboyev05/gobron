@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/network/api_exception.dart';
 import 'auth_controller.dart';
@@ -14,34 +13,35 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController(text: '+998');
-  bool _submitting = false;
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscure = true;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _submitting = true);
-    try {
-      await ref.read(authControllerProvider.notifier).requestOtp(_phoneController.text.trim());
-      if (mounted) context.push('/otp', extra: _phoneController.text.trim());
-    } on ApiException catch (e) {
-      _showError(e.message);
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+    await ref.read(authControllerProvider.notifier).login(
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
+        );
+    // Router redirects to /home once state becomes authenticated.
+    final error = ref.read(authControllerProvider).error;
+    if (error != null && mounted) {
+      final message = error is ApiException ? error.message : 'Login yoki parol noto\'g\'ri';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final submitting = ref.watch(authControllerProvider).isLoading;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -62,35 +62,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Telefon raqamingizni kiriting',
+                    'Login va parolingizni kiriting',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
+                    controller: _usernameController,
                     decoration: const InputDecoration(
-                      labelText: 'Telefon raqam',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                      hintText: '+998901234567',
+                      labelText: 'Login',
+                      prefixIcon: Icon(Icons.person_outline),
+                      hintText: 'superadmin',
                     ),
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.length < 9) return 'Telefon raqamni to\'liq kiriting';
-                      return null;
-                    },
+                    validator: (v) =>
+                        (v?.trim().isEmpty ?? true) ? 'Loginni kiriting' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscure,
+                    decoration: InputDecoration(
+                      labelText: 'Parol',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.length < 4) ? 'Parolni kiriting' : null,
+                    onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
+                    onPressed: submitting ? null : _submit,
+                    child: submitting
                         ? const SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Kod olish'),
+                        : const Text('Kirish'),
                   ),
                 ],
               ),

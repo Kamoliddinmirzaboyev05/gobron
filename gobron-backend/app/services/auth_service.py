@@ -15,6 +15,7 @@ from app.core.security import (
     generate_otp,
     validate_telegram_init_data,
     verify_otp,
+    verify_password,
 )
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -34,6 +35,17 @@ class AuthService:
             "access_token": create_access_token(user.id, user.role.value),
             "refresh_token": create_refresh_token(user.id, user.role.value),
         }
+
+    async def login_with_password(self, username: str, password: str) -> dict:
+        """Username + password login for admins and field owners."""
+        user = await self.users.get_by_username(username)
+        if user is None or not user.hashed_password:
+            raise AuthError("Login yoki parol noto'g'ri")
+        if not verify_password(password, user.hashed_password):
+            raise AuthError("Login yoki parol noto'g'ri")
+        if user.is_blocked or not user.is_active:
+            raise AuthError("Hisob bloklangan")
+        return self._tokens(user)
 
     async def login_with_telegram(self, init_data: str) -> dict:
         """Validate TMA initData and issue tokens for the onboarded user."""

@@ -5,6 +5,8 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Fields from "./pages/Fields";
+import FieldSlots from "./pages/FieldSlots";
+import FieldOwners from "./pages/FieldOwners";
 import Users from "./pages/Users";
 import Bookings from "./pages/Bookings";
 import Broadcasts from "./pages/Broadcasts";
@@ -35,6 +37,8 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="fields" element={<Fields />} />
+        <Route path="fields/:id/slots" element={<FieldSlots />} />
+        <Route path="field-owners" element={<FieldOwners />} />
         <Route path="users" element={<Users />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="broadcasts" element={<Broadcasts />} />

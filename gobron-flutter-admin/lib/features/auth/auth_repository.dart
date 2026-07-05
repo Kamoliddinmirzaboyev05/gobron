@@ -9,23 +9,15 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStorage _tokens;
 
-  Future<void> requestOtp(String phone) async {
-    await _api.post('/auth/otp/request', data: {'phone': phone});
-  }
-
-  /// Verifies the OTP, persists the JWT pair and returns the logged-in profile.
-  Future<UserProfile> verifyOtp({
-    required String phone,
-    required String code,
-    String? fullName,
+  /// Username + password login. Persists the JWT pair and returns the profile.
+  /// Only field owners (and superadmins) may use this app.
+  Future<UserProfile> login({
+    required String username,
+    required String password,
   }) async {
     final tokens = await _api.post(
-      '/auth/otp/verify',
-      data: {
-        'phone': phone,
-        'code': code,
-        if (fullName != null && fullName.isNotEmpty) 'full_name': fullName,
-      },
+      '/auth/login',
+      data: {'username': username, 'password': password},
     );
     await _tokens.save(
       accessToken: tokens['access_token'] as String,
@@ -33,15 +25,15 @@ class AuthRepository {
     );
 
     final profile = await fetchMe();
-    if (!profile.isFieldOwner) {
+    if (!profile.canManageFields) {
       await _tokens.clear();
-      throw ApiException('Bu ilova faqat maydon egalari (field owner) uchun.');
+      throw ApiException('Bu ilova faqat maydon egalari uchun.');
     }
     return profile;
   }
 
   Future<UserProfile> fetchMe() async {
-    final json = await _api.get('/users/me');
+    final json = await _api.get('/auth/me');
     return UserProfile.fromJson(json);
   }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, CalendarPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Pencil, Trash2, CalendarPlus, CalendarClock } from "lucide-react";
 import { useFields, useDeleteField, useGenerateSlots } from "../hooks/useFields";
 import FieldFormModal from "../components/FieldFormModal";
 import { Badge, Empty, Spinner } from "../components/ui";
@@ -61,12 +62,19 @@ export default function Fields() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <button
-                        title="Slot generatsiya"
+                        title="Slot generatsiya (14 kun)"
                         onClick={() => gen.mutate({ fieldId: f.id, days: 14 })}
                         className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-pitch-600"
                       >
                         <CalendarPlus className="h-4 w-4" />
                       </button>
+                      <Link
+                        to={`/fields/${f.id}/slots`}
+                        title="Slotlarni boshqarish"
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-pitch-600"
+                      >
+                        <CalendarClock className="h-4 w-4" />
+                      </Link>
                       <button title="Tahrirlash" onClick={() => openEdit(f)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-50">
                         <Pencil className="h-4 w-4" />
                       </button>

@@ -5,7 +5,7 @@ import '../features/fields/presentation/fields_list_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
 
 /// Bottom-nav shell for the three main sections. A logged-in field owner
-/// lands here after OTP verification (see core/routing/app_router.dart).
+/// lands here after login (see core/routing/app_router.dart).
 /// Each tab owns its own Scaffold/AppBar; the logout action lives on each
 /// of them (see `LogoutAction` in fields/bookings/stats screens).
 class HomeShell extends StatefulWidget {

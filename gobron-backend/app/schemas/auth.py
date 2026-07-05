@@ -12,6 +12,11 @@ class OTPVerify(BaseModel):
     full_name: str | None = Field(None, max_length=120)
 
 
+class PasswordLogin(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=4, max_length=128)
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str

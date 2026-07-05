@@ -19,6 +19,10 @@ class UserRepository:
         res = await self.db.execute(select(User).where(User.phone == phone))
         return res.scalar_one_or_none()
 
+    async def get_by_username(self, username: str) -> User | None:
+        res = await self.db.execute(select(User).where(User.username == username))
+        return res.scalar_one_or_none()
+
     async def get_by_telegram_id(self, telegram_id: int) -> User | None:
         res = await self.db.execute(
             select(User).where(User.telegram_id == telegram_id)

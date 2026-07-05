@@ -16,13 +16,12 @@ export function useMe() {
   });
 }
 
-/** OTP login for admins (phone + code). Backend dev mode accepts 111111. */
+/** Username + password login for admins. */
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ phone, code }: { phone: string; code: string }) => {
-      await api.post("/auth/otp/request", { phone });
-      const res = await api.post("/auth/otp/verify", { phone, code });
+    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+      const res = await api.post("/auth/login", { username, password });
       tokens.set(tokenPairSchema.parse(res.data));
       const me = await api.get("/auth/me");
       return userSchema.parse(me.data);

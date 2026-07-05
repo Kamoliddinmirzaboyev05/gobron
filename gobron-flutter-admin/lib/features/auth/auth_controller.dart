@@ -29,12 +29,10 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
   }
 
-  Future<void> requestOtp(String phone) => _repo.requestOtp(phone);
-
-  Future<void> verifyOtp({required String phone, required String code, String? fullName}) async {
+  Future<void> login({required String username, required String password}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final profile = await _repo.verifyOtp(phone: phone, code: code, fullName: fullName);
+      final profile = await _repo.login(username: username, password: password);
       return AuthState(profile);
     });
   }

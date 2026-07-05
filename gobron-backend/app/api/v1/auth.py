@@ -3,7 +3,13 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.core.deps import CurrentUser, DBSession
-from app.schemas.auth import OTPRequest, OTPVerify, RefreshRequest, TokenPair
+from app.schemas.auth import (
+    OTPRequest,
+    OTPVerify,
+    PasswordLogin,
+    RefreshRequest,
+    TokenPair,
+)
 from app.schemas.user import UserOut
 from app.services.auth_service import AuthError, AuthService
 
@@ -12,6 +18,15 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class TelegramLogin(BaseModel):
     init_data: str  # value of window.Telegram.WebApp.initData
+
+
+@router.post("/login", response_model=TokenPair)
+async def login(body: PasswordLogin, db: DBSession):
+    """Username + password login for admins and field owners."""
+    try:
+        return await AuthService(db).login_with_password(body.username, body.password)
+    except AuthError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc))
 
 
 @router.post("/telegram", response_model=TokenPair)

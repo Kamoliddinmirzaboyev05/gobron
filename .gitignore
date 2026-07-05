@@ -37,3 +37,4 @@ dist-ssr/
 *.swp
 .idea/
 .vscode/
+*.tsbuildinfo
