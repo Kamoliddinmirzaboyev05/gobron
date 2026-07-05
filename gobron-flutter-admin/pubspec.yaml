@@ -1,0 +1,40 @@
+name: gobron_flutter_admin
+description: "Gobron field-owner admin app — manage fields, slots and bookings."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Networking
+  dio: ^5.7.0
+
+  # Navigation (declarative, supports auth redirects)
+  go_router: ^14.6.2
+
+  # Secure JWT storage (Keychain / EncryptedSharedPreferences)
+  flutter_secure_storage: ^9.2.2
+
+  # Runtime config from .env (API base URL)
+  flutter_dotenv: ^5.2.1
+
+  # Date/time formatting + parsing (working days, slot times)
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
