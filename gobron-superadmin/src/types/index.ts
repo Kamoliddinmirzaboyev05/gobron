@@ -95,10 +95,13 @@ export const fieldOwnerSchema = z.object({
   created_at: z.string(),
 });
 
+export const broadcastAudienceSchema = z.enum(["bot_users", "field_owners", "all"]);
+
 export const broadcastSchema = z.object({
   id: z.number(),
   text: z.string(),
   image_url: z.string().nullable(),
+  audience: broadcastAudienceSchema,
   status: z.enum(["draft", "sending", "sent", "failed"]),
   sent_count: z.number(),
   failed_count: z.number(),
@@ -116,3 +119,4 @@ export type AdminBooking = z.infer<typeof adminBookingSchema>;
 export type BookingStatus = z.infer<typeof bookingStatusEnum>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type Broadcast = z.infer<typeof broadcastSchema>;
+export type BroadcastAudience = z.infer<typeof broadcastAudienceSchema>;

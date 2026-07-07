@@ -2,18 +2,25 @@ import { useState } from "react";
 import { Send, Image as ImageIcon } from "lucide-react";
 import { useBroadcasts, useCreateBroadcast } from "../hooks/useBroadcasts";
 import { Badge, Empty, Spinner } from "../components/ui";
+import type { BroadcastAudience } from "../types";
 
 export default function Broadcasts() {
   const [text, setText] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [audience, setAudience] = useState<BroadcastAudience>("all");
   const { data, isLoading } = useBroadcasts();
   const create = useCreateBroadcast();
+  const audienceOptions: Array<{ value: BroadcastAudience; label: string }> = [
+    { value: "all", label: "Hammaga" },
+    { value: "bot_users", label: "Bot foydalanuvchilari" },
+    { value: "field_owners", label: "Maydon egalari" },
+  ];
 
   function send(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
     create.mutate(
-      { text: text.trim(), image_url: imageUrl.trim() || null },
+      { text: text.trim(), image_url: imageUrl.trim() || null, audience },
       { onSuccess: () => { setText(""); setImageUrl(""); } },
     );
   }
@@ -39,6 +46,22 @@ export default function Broadcasts() {
             className="flex-1 py-2 text-sm outline-none"
           />
         </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {audienceOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setAudience(option.value)}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium ${
+                audience === option.value
+                  ? "border-pitch-600 bg-pitch-50 text-pitch-700"
+                  : "border-gray-200 bg-white text-gray-600"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <button
           disabled={create.isPending || !text.trim()}
           className="mt-3 flex items-center gap-2 rounded-lg bg-pitch-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
@@ -63,6 +86,9 @@ export default function Broadcasts() {
               </div>
               <p className="mt-2 text-xs text-gray-400">
                 Yuborildi: {b.sent_count} · Xato: {b.failed_count}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Qabul qiluvchi: {b.audience === "all" ? "Hammaga" : b.audience === "bot_users" ? "Bot foydalanuvchilari" : "Maydon egalari"}
               </p>
             </div>
           ))}
