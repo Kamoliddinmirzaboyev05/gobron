@@ -1,7 +1,7 @@
 """field owner venue and manual bookings
 
 Revision ID: 20260707_field_owner_redesign
-Revises:
+Revises: 28ffba52f159
 Create Date: 2026-07-07
 """
 from typing import Sequence
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision: str = "20260707_field_owner_redesign"
-down_revision: str | None = None
+down_revision: str | None = "28ffba52f159"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
