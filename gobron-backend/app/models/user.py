@@ -1,8 +1,8 @@
 """User model — players, field owners and superadmins.
 
 A single table holds all accounts; `role` distinguishes their capabilities.
-Onboarding happens in the Telegram bot (start -> phone, region, city, first and
-last name); afterwards the user opens the Telegram Mini App (TMA), which logs in
+Onboarding happens in the Telegram bot (start -> first name, region, phone);
+afterwards the user opens the Telegram Mini App (TMA), which logs in
 by validating Telegram `initData`. There is no password column. Phone + OTP is
 also supported as a fallback login.
 """

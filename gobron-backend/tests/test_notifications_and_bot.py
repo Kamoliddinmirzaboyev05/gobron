@@ -39,3 +39,11 @@ def test_owner_router_exposes_notifications_route():
     paths = {route.path for route in app.routes}
 
     assert "/api/v1/owner/notifications" in paths
+
+
+def test_bot_onboarding_states_are_name_region_phone_only():
+    from bot.main import Onboarding
+
+    states = [state.state.split(":")[-1] for state in Onboarding.__states__]
+
+    assert states == ["first_name", "region", "phone"]

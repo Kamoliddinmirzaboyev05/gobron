@@ -1,8 +1,8 @@
 """Gobron onboarding bot (aiogram 3).
 
-Flow: /start -> share phone (contact) -> pick region -> type city -> first name
--> last name. On completion the user row is upserted with is_onboarded=True and
-a button opens the Telegram Mini App (TMA).
+Flow: /start -> first name -> pick region -> share phone (contact). On
+completion the user row is upserted with is_onboarded=True and a button opens
+the Telegram Mini App (TMA).
 
 The bot shares the backend's database and models — it imports app.* directly, so
 there is a single source of truth for the User table.
@@ -37,11 +37,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 class Onboarding(StatesGroup):
-    phone = State()
-    region = State()
-    city = State()
     first_name = State()
-    last_name = State()
+    region = State()
+    phone = State()
 
 
 dp = Dispatcher()
@@ -79,57 +77,45 @@ async def start(message: Message, state: FSMContext):
         )
         return
 
-    await state.set_state(Onboarding.phone)
-    kb = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📱 Raqamni yuborish", request_contact=True)]],
-        resize_keyboard=True,
-        one_time_keyboard=True,
-    )
+    await state.set_state(Onboarding.first_name)
     await message.answer(
         "Assalomu alaykum! Gobronga xush kelibsiz.\n"
-        "Ro'yxatdan o'tish uchun telefon raqamingizni yuboring:",
-        reply_markup=kb,
+        "Ro'yxatdan o'tish uchun ismingizni yozing:",
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 
-@dp.message(Onboarding.phone, F.contact)
-async def got_phone(message: Message, state: FSMContext):
-    await state.update_data(phone=message.contact.phone_number)
+@dp.message(Onboarding.first_name, F.text)
+async def got_first_name(message: Message, state: FSMContext):
+    first_name = message.text.strip()
+    if not first_name:
+        await message.answer("Iltimos, ismingizni yozing:")
+        return
+    await state.update_data(first_name=first_name)
     await state.set_state(Onboarding.region)
-    await message.answer("Viloyatingizni tanlang:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Viloyatingizni tanlang:")
     await message.answer("👇", reply_markup=_region_keyboard())
-
-
-@dp.message(Onboarding.phone)
-async def phone_retry(message: Message):
-    await message.answer("Iltimos, pastdagi tugma orqali raqamingizni yuboring.")
 
 
 @dp.callback_query(Onboarding.region, F.data.startswith("region:"))
 async def got_region(cb: CallbackQuery, state: FSMContext):
     idx = int(cb.data.split(":", 1)[1])
     await state.update_data(region=REGIONS[idx])
-    await state.set_state(Onboarding.city)
-    await cb.message.answer(f"Viloyat: {REGIONS[idx]}\nShahar/tumaningizni yozing:")
+    await state.set_state(Onboarding.phone)
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Raqamni yuborish", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True,
+    )
+    await cb.message.answer(
+        f"Viloyat: {REGIONS[idx]}\nEndi telefon raqamingizni yuboring:",
+        reply_markup=kb,
+    )
     await cb.answer()
 
 
-@dp.message(Onboarding.city, F.text)
-async def got_city(message: Message, state: FSMContext):
-    await state.update_data(city=message.text.strip())
-    await state.set_state(Onboarding.first_name)
-    await message.answer("Ismingizni yozing:")
-
-
-@dp.message(Onboarding.first_name, F.text)
-async def got_first_name(message: Message, state: FSMContext):
-    await state.update_data(first_name=message.text.strip())
-    await state.set_state(Onboarding.last_name)
-    await message.answer("Familiyangizni yozing:")
-
-
-@dp.message(Onboarding.last_name, F.text)
-async def got_last_name(message: Message, state: FSMContext):
+@dp.message(Onboarding.phone, F.contact)
+async def got_phone(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
 
@@ -139,18 +125,24 @@ async def got_last_name(message: Message, state: FSMContext):
         if user is None:
             user = User(telegram_id=message.from_user.id)
             db.add(user)
-        user.phone = data["phone"]
+        user.phone = message.contact.phone_number
         user.region = data["region"]
-        user.city = data["city"]
         user.first_name = data["first_name"]
-        user.last_name = message.text.strip()
+        user.city = None
+        user.last_name = None
         user.is_onboarded = True
         await db.commit()
 
     await message.answer(
         "✅ Ro'yxatdan o'tdingiz! Endi ilovadan foydalanishingiz mumkin.",
-        reply_markup=_open_app_keyboard(),
+        reply_markup=ReplyKeyboardRemove(),
     )
+    await message.answer("👇", reply_markup=_open_app_keyboard())
+
+
+@dp.message(Onboarding.phone)
+async def phone_retry(message: Message):
+    await message.answer("Iltimos, pastdagi tugma orqali raqamingizni yuboring.")
 
 
 async def main() -> None:
