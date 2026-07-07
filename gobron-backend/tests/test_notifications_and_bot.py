@@ -31,3 +31,11 @@ def test_all_broadcast_includes_telegram_delivery():
     broadcast = Broadcast(text="Everyone", audience=BroadcastAudience.ALL)
 
     assert BroadcastService._includes_bot_users(broadcast) is True
+
+
+def test_owner_router_exposes_notifications_route():
+    from app.main import app
+
+    paths = {route.path for route in app.routes}
+
+    assert "/api/v1/owner/notifications" in paths

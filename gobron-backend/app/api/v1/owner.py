@@ -2,10 +2,13 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 
 from app.core.deps import DBSession, require_role
-from app.models.enums import UserRole
+from app.models.broadcast import Broadcast
+from app.models.enums import BroadcastAudience, UserRole
 from app.models.user import User
+from app.schemas.broadcast import BroadcastOut
 from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingOut,
@@ -113,3 +116,18 @@ async def complete_booking(
 @router.get("/stats/summary", response_model=OwnerStatsSummary)
 async def stats_summary(db: DBSession, user: User = Depends(_owner)):
     return await OwnerService(db).stats_summary(user)
+
+
+@router.get("/notifications", response_model=list[BroadcastOut])
+async def list_notifications(db: DBSession, user: User = Depends(_owner)):
+    stmt = (
+        select(Broadcast)
+        .where(
+            Broadcast.audience.in_(
+                [BroadcastAudience.FIELD_OWNERS, BroadcastAudience.ALL]
+            )
+        )
+        .order_by(Broadcast.created_at.desc())
+        .limit(100)
+    )
+    return list((await db.execute(stmt)).scalars().all())
