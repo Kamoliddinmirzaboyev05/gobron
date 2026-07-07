@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/fields/presentation/fields_list_screen.dart';
+import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
 import '../features/venue/presentation/venue_settings_screen.dart';
 
@@ -21,6 +22,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _screens = [
     StatsScreen(),
     FieldsListScreen(),
+    NotificationsScreen(),
     VenueSettingsScreen(),
   ];
 
@@ -39,6 +41,10 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.sports_soccer_outlined),
             label: 'Maydonlar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_outlined),
+            label: 'Bildirishnomalar',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
