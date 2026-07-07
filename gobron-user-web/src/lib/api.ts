@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1";
+  import.meta.env.VITE_API_URL ?? "https://gobronapi.webportfolio.uz/api/v1";
 
 const ACCESS_KEY = "gobron_access";
 const REFRESH_KEY = "gobron_refresh";
