@@ -1,5 +1,6 @@
 import pytest
 
+from app.main import app
 from app.models.enums import UserRole
 from app.models.user import User
 from app.services.auth_service import AuthError, AuthService
@@ -115,3 +116,20 @@ def test_owner_models_are_registered():
     assert hasattr(Field, "size")
     assert hasattr(Field, "surface_type")
     assert hasattr(Field, "price_per_hour")
+
+
+def test_owner_router_exposes_venue_route():
+    paths = {route.path for route in app.routes}
+
+    assert "/api/v1/owner/venue" in paths
+
+
+def test_time_ranges_overlap_detects_conflicts():
+    from datetime import time
+
+    from app.services.owner_service import time_ranges_overlap
+
+    assert time_ranges_overlap(time(10, 0), time(11, 0), time(10, 30), time(11, 30))
+    assert time_ranges_overlap(time(10, 0), time(11, 0), time(9, 30), time(10, 30))
+    assert not time_ranges_overlap(time(10, 0), time(11, 0), time(11, 0), time(12, 0))
+    assert not time_ranges_overlap(time(10, 0), time(11, 0), time(8, 0), time(10, 0))

@@ -1,0 +1,115 @@
+"""Owner endpoints used by the Flutter admin app."""
+from datetime import date
+
+from fastapi import APIRouter, Depends, Query, status
+
+from app.core.deps import DBSession, require_role
+from app.models.enums import UserRole
+from app.models.user import User
+from app.schemas.owner import (
+    ManualBookingCreate,
+    ManualBookingOut,
+    ManualBookingUpdate,
+    OwnerFieldIn,
+    OwnerFieldOut,
+    OwnerStatsSummary,
+    VenueIn,
+    VenueOut,
+)
+from app.services.owner_service import OwnerService
+
+router = APIRouter(prefix="/owner", tags=["owner"])
+
+_owner = require_role(UserRole.FIELD_OWNER, UserRole.SUPERADMIN)
+
+
+@router.get("/venue", response_model=VenueOut)
+async def get_venue(db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).get_or_create_venue(user)
+
+
+@router.put("/venue", response_model=VenueOut)
+async def put_venue(body: VenueIn, db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).upsert_venue(user, body)
+
+
+@router.get("/fields", response_model=list[OwnerFieldOut])
+async def list_fields(db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).list_fields(user)
+
+
+@router.post(
+    "/fields", response_model=OwnerFieldOut, status_code=status.HTTP_201_CREATED
+)
+async def create_field(body: OwnerFieldIn, db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).create_field(user, body)
+
+
+@router.patch("/fields/{field_id}", response_model=OwnerFieldOut)
+async def update_field(
+    field_id: int,
+    body: OwnerFieldIn,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).update_field(user, field_id, body)
+
+
+@router.delete("/fields/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_field(field_id: int, db: DBSession, user: User = Depends(_owner)):
+    await OwnerService(db).delete_field(user, field_id)
+
+
+@router.get("/bookings", response_model=list[ManualBookingOut])
+async def list_bookings(
+    db: DBSession,
+    user: User = Depends(_owner),
+    booking_date: date | None = Query(None, alias="date"),
+):
+    return await OwnerService(db).list_bookings(user, booking_date)
+
+
+@router.post(
+    "/bookings",
+    response_model=ManualBookingOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_booking(
+    body: ManualBookingCreate,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).create_manual_booking(user, body)
+
+
+@router.patch("/bookings/{booking_id}", response_model=ManualBookingOut)
+async def update_booking(
+    booking_id: int,
+    body: ManualBookingUpdate,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).update_booking(user, booking_id, body)
+
+
+@router.post("/bookings/{booking_id}/cancel", response_model=ManualBookingOut)
+async def cancel_booking(
+    booking_id: int,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).cancel_booking(user, booking_id)
+
+
+@router.post("/bookings/{booking_id}/complete", response_model=ManualBookingOut)
+async def complete_booking(
+    booking_id: int,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).complete_booking(user, booking_id)
+
+
+@router.get("/stats/summary", response_model=OwnerStatsSummary)
+async def stats_summary(db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).stats_summary(user)
