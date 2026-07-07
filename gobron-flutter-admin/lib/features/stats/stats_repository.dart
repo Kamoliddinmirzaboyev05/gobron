@@ -7,7 +7,7 @@ class StatsRepository {
   final ApiClient _api;
 
   Future<DashboardStats> dashboard() async {
-    final json = await _api.get('/owner/stats/dashboard');
+    final json = await _api.get('/owner/stats/summary');
     return DashboardStats.fromJson(json);
   }
 }

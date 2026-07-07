@@ -5,7 +5,10 @@ import 'auth_repository.dart';
 import 'models/user_profile.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepository(ref.watch(apiClientProvider), ref.watch(tokenStorageProvider));
+  return AuthRepository(
+    ref.watch(apiClientProvider),
+    ref.watch(tokenStorageProvider),
+  );
 });
 
 /// `null` user with no loading == signed out. Non-null user == signed in.
@@ -29,10 +32,13 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
   }
 
-  Future<void> login({required String username, required String password}) async {
+  Future<void> loginWithPhone({required String phone, String? fullName}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final profile = await _repo.login(username: username, password: password);
+      final profile = await _repo.loginWithPhone(
+        phone: phone,
+        fullName: fullName,
+      );
       return AuthState(profile);
     });
   }

@@ -1,41 +1,52 @@
 /// Mirrors backend `DashboardStats` (gobron-backend/app/schemas/stats.py).
 class DashboardStats {
   DashboardStats({
-    required this.totalRevenue,
-    required this.totalBookings,
-    required this.activeFields,
-    required this.occupancyRate,
-    required this.revenueSeries,
-    required this.popularSlots,
+    required this.todayRevenue,
+    required this.weeklyRevenue,
+    required this.monthlyRevenue,
+    required this.todayBookingCount,
+    required this.weeklyBookingCount,
+    required this.monthlyBookingCount,
+    this.topFieldName,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
-      totalRevenue: _toDouble(json['total_revenue']),
-      totalBookings: json['total_bookings'] as int,
-      activeFields: json['active_fields'] as int,
-      occupancyRate: (json['occupancy_rate'] as num).toDouble(),
-      revenueSeries: (json['revenue_series'] as List)
-          .map((e) => RevenuePoint.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      popularSlots: (json['popular_slots'] as List)
-          .map((e) => PopularSlot.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      todayRevenue: _toDouble(json['today_revenue']),
+      weeklyRevenue: _toDouble(json['weekly_revenue']),
+      monthlyRevenue: _toDouble(json['monthly_revenue']),
+      todayBookingCount: json['today_booking_count'] as int,
+      weeklyBookingCount: json['weekly_booking_count'] as int,
+      monthlyBookingCount: json['monthly_booking_count'] as int,
+      topFieldName: json['top_field_name'] as String?,
     );
   }
 
-  final double totalRevenue;
-  final int totalBookings;
-  final int activeFields;
-  final double occupancyRate; // 0..1
-  final List<RevenuePoint> revenueSeries;
-  final List<PopularSlot> popularSlots;
+  final double todayRevenue;
+  final double weeklyRevenue;
+  final double monthlyRevenue;
+  final int todayBookingCount;
+  final int weeklyBookingCount;
+  final int monthlyBookingCount;
+  final String? topFieldName;
 
-  static double _toDouble(dynamic v) => v is String ? double.parse(v) : (v as num).toDouble();
+  double get totalRevenue => monthlyRevenue;
+  int get totalBookings => monthlyBookingCount;
+  int get activeFields => 0;
+  double get occupancyRate => 0;
+  List<RevenuePoint> get revenueSeries => const [];
+  List<PopularSlot> get popularSlots => const [];
+
+  static double _toDouble(dynamic v) =>
+      v is String ? double.parse(v) : (v as num).toDouble();
 }
 
 class RevenuePoint {
-  RevenuePoint({required this.day, required this.revenue, required this.bookings});
+  RevenuePoint({
+    required this.day,
+    required this.revenue,
+    required this.bookings,
+  });
 
   factory RevenuePoint.fromJson(Map<String, dynamic> json) {
     return RevenuePoint(

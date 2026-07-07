@@ -13,28 +13,35 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscure = true;
+  final _phoneController = TextEditingController();
+  final _fullNameController = TextEditingController();
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _phoneController.dispose();
+    _fullNameController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(authControllerProvider.notifier).login(
-          username: _usernameController.text.trim(),
-          password: _passwordController.text,
+    await ref
+        .read(authControllerProvider.notifier)
+        .loginWithPhone(
+          phone: _phoneController.text.trim(),
+          fullName: _fullNameController.text.trim().isEmpty
+              ? null
+              : _fullNameController.text.trim(),
         );
     // Router redirects to /home once state becomes authenticated.
     final error = ref.read(authControllerProvider).error;
     if (error != null && mounted) {
-      final message = error is ApiException ? error.message : 'Login yoki parol noto\'g\'ri';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      final message = error is ApiException
+          ? error.message
+          : 'Kirishda xatolik';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -53,7 +60,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.sports_soccer, size: 72, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.sports_soccer,
+                    size: 72,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'Gobron — Maydon egasi',
@@ -62,35 +73,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Login va parolingizni kiriting',
+                    'Telefon raqam orqali kiring',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 32),
                   TextFormField(
-                    controller: _usernameController,
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
-                      labelText: 'Login',
-                      prefixIcon: Icon(Icons.person_outline),
-                      hintText: 'superadmin',
+                      labelText: 'Telefon raqam',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                      hintText: '+998901234567',
                     ),
-                    validator: (v) =>
-                        (v?.trim().isEmpty ?? true) ? 'Loginni kiriting' : null,
+                    validator: (v) => (v?.trim().isEmpty ?? true)
+                        ? 'Telefon raqamni kiriting'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscure,
-                    decoration: InputDecoration(
-                      labelText: 'Parol',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
+                    controller: _fullNameController,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Ism familiya',
+                      prefixIcon: Icon(Icons.person_outline),
+                      hintText: 'Yangi foydalanuvchi uchun',
                     ),
-                    validator: (v) =>
-                        (v == null || v.length < 4) ? 'Parolni kiriting' : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 24),

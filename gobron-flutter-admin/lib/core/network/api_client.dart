@@ -69,11 +69,16 @@ class ApiClient {
     }
   }
 
-  Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? query}) =>
-      _request(() => _dio.get(path, queryParameters: query));
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, dynamic>? query,
+  }) => _request(() => _dio.get(path, queryParameters: query));
 
   Future<Map<String, dynamic>> post(String path, {Object? data}) =>
       _request(() => _dio.post(path, data: data));
+
+  Future<Map<String, dynamic>> put(String path, {Object? data}) =>
+      _request(() => _dio.put(path, data: data));
 
   Future<Map<String, dynamic>> patch(String path, {Object? data}) =>
       _request(() => _dio.patch(path, data: data));
@@ -84,7 +89,9 @@ class ApiClient {
   Future<List<dynamic>> postList(String path, {Object? data}) =>
       _requestList(() => _dio.post(path, data: data));
 
-  Future<Map<String, dynamic>> _request(Future<Response> Function() call) async {
+  Future<Map<String, dynamic>> _request(
+    Future<Response> Function() call,
+  ) async {
     try {
       final response = await call();
       return (response.data as Map).cast<String, dynamic>();

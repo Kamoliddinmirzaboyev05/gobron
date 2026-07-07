@@ -9,15 +9,15 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStorage _tokens;
 
-  /// Username + password login. Persists the JWT pair and returns the profile.
+  /// OTP-free phone login. Persists the JWT pair and returns the profile.
   /// Only field owners (and superadmins) may use this app.
-  Future<UserProfile> login({
-    required String username,
-    required String password,
+  Future<UserProfile> loginWithPhone({
+    required String phone,
+    String? fullName,
   }) async {
     final tokens = await _api.post(
-      '/auth/login',
-      data: {'username': username, 'password': password},
+      '/auth/phone-login',
+      data: {'phone': phone, if (fullName != null) 'full_name': fullName},
     );
     await _tokens.save(
       accessToken: tokens['access_token'] as String,

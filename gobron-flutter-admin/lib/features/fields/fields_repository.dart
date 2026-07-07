@@ -12,12 +12,15 @@ class FieldsRepository {
   }
 
   Future<Field> create(Field field) async {
-    final json = await _api.post('/owner/fields', data: field.toJson());
+    final json = await _api.post('/owner/fields', data: field.toOwnerJson());
     return Field.fromJson(json);
   }
 
   Future<Field> update(int id, Field field) async {
-    final json = await _api.patch('/owner/fields/$id', data: field.toJson());
+    final json = await _api.patch(
+      '/owner/fields/$id',
+      data: field.toOwnerJson(),
+    );
     return Field.fromJson(json);
   }
 }
