@@ -28,7 +28,11 @@ class ManualBooking(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ManualBookingStatus] = mapped_column(
-        Enum(ManualBookingStatus, name="manual_booking_status"),
+        Enum(
+            ManualBookingStatus,
+            name="manual_booking_status",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         default=ManualBookingStatus.BOOKED,
         nullable=False,
     )

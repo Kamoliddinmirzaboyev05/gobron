@@ -133,3 +133,17 @@ def test_time_ranges_overlap_detects_conflicts():
     assert time_ranges_overlap(time(10, 0), time(11, 0), time(9, 30), time(10, 30))
     assert not time_ranges_overlap(time(10, 0), time(11, 0), time(11, 0), time(12, 0))
     assert not time_ranges_overlap(time(10, 0), time(11, 0), time(8, 0), time(10, 0))
+
+
+def test_manual_booking_status_binds_lowercase_enum_values():
+    from sqlalchemy.dialects import postgresql
+
+    from app.models.enums import ManualBookingStatus
+    from app.models.manual_booking import ManualBooking
+
+    status_type = ManualBooking.__table__.c.status.type
+    bind_processor = status_type.bind_processor(postql_dialect := postgresql.dialect())
+
+    assert bind_processor is not None
+    assert bind_processor(ManualBookingStatus.BOOKED) == "booked"
+    assert status_type.result_processor(postql_dialect, None)("booked") == ManualBookingStatus.BOOKED
