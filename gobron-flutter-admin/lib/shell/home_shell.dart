@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../features/bookings/presentation/bookings_screen.dart';
 import '../features/fields/presentation/fields_list_screen.dart';
 import '../features/stats/presentation/stats_screen.dart';
+import '../features/venue/presentation/venue_settings_screen.dart';
 
 /// Bottom-nav shell for the three main sections. A logged-in field owner
 /// lands here after login (see core/routing/app_router.dart).
@@ -18,7 +18,11 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  static const _screens = [FieldsListScreen(), BookingsScreen(), StatsScreen()];
+  static const _screens = [
+    StatsScreen(),
+    FieldsListScreen(),
+    VenueSettingsScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +32,18 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.sports_soccer_outlined), label: 'Maydonlar'),
-          NavigationDestination(icon: Icon(Icons.event_note_outlined), label: 'Bookinglar'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), label: 'Statistika'),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            label: 'Asosiy',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.sports_soccer_outlined),
+            label: 'Maydonlar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Sozlamalar',
+          ),
         ],
       ),
     );

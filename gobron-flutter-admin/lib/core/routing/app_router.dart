@@ -6,7 +6,6 @@ import '../../features/auth/auth_controller.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/fields/models/field.dart';
 import '../../features/fields/presentation/field_form_screen.dart';
-import '../../features/slots/presentation/slots_screen.dart';
 import '../../shell/home_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -35,11 +34,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/fields/edit',
-        builder: (context, state) => FieldFormScreen(field: state.extra as Field),
-      ),
-      GoRoute(
-        path: '/fields/slots',
-        builder: (context, state) => SlotsScreen(field: state.extra as Field),
+        builder: (context, state) =>
+            FieldFormScreen(field: state.extra as Field),
       ),
     ],
   );

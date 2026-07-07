@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/widgets/logout_action.dart';
+import '../../manual_bookings/manual_booking_controller.dart';
+import '../../manual_bookings/presentation/manual_booking_sheet.dart';
 import '../stats_controller.dart';
 
 class StatsScreen extends ConsumerWidget {
@@ -11,14 +12,27 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statsControllerProvider);
+    final bookingsAsync = ref.watch(manualBookingControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistika'), actions: const [LogoutAction()]),
+      appBar: AppBar(
+        title: const Text('Asosiy'),
+        actions: const [LogoutAction()],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showManualBookingSheet(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Band qilish'),
+      ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(statsControllerProvider.notifier).refresh(),
+        onRefresh: () async {
+          await ref.read(statsControllerProvider.notifier).refresh();
+          await ref.read(manualBookingControllerProvider.notifier).refresh();
+        },
         child: statsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ListView(children: [Center(child: Text('Xatolik: $e'))]),
+          error: (e, _) =>
+              ListView(children: [Center(child: Text('Xatolik: $e'))]),
           data: (stats) => ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -26,17 +40,17 @@ class StatsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _StatTile(
-                      label: 'Jami daromad',
-                      value: '${stats.totalRevenue.toStringAsFixed(0)} so\'m',
-                      icon: Icons.payments_outlined,
+                      label: 'Bugun',
+                      value: '${stats.todayRevenue.toStringAsFixed(0)} so‘m',
+                      icon: Icons.today_outlined,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _StatTile(
-                      label: 'Bandlik',
-                      value: '${(stats.occupancyRate * 100).toStringAsFixed(0)}%',
-                      icon: Icons.pie_chart_outline,
+                      label: 'Hafta',
+                      value: '${stats.weeklyRevenue.toStringAsFixed(0)} so‘m',
+                      icon: Icons.date_range_outlined,
                     ),
                   ),
                 ],
@@ -46,49 +60,59 @@ class StatsScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _StatTile(
-                      label: 'Bookinglar',
-                      value: '${stats.totalBookings}',
-                      icon: Icons.event_note_outlined,
+                      label: 'Oy',
+                      value: '${stats.monthlyRevenue.toStringAsFixed(0)} so‘m',
+                      icon: Icons.calendar_month_outlined,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _StatTile(
-                      label: 'Faol maydonlar',
-                      value: '${stats.activeFields}',
-                      icon: Icons.sports_soccer,
+                      label: 'Bugungi bandlik',
+                      value: '${stats.todayBookingCount} ta',
+                      icon: Icons.event_available_outlined,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              Text('Kunlik daromad', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: stats.revenueSeries
-                      .map((p) => ListTile(
-                            dense: true,
-                            title: Text(DateFormat('d-MMM').format(p.day)),
-                            trailing: Text('${p.revenue.toStringAsFixed(0)} so\'m · ${p.bookings} ta'),
-                          ))
-                      .toList(),
-                ),
+              Text(
+                'Bugungi bandliklar',
+                style: Theme.of(context).textTheme.titleSmall,
               ),
-              const SizedBox(height: 24),
-              Text('Mashhur soatlar', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
-              Card(
-                child: Column(
-                  children: stats.popularSlots
-                      .map((p) => ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.schedule),
-                            title: Text(p.startTime),
-                            trailing: Text('${p.bookings} ta booking'),
-                          ))
-                      .toList(),
-                ),
+              bookingsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Xatolik: $e'),
+                data: (bookings) => bookings.isEmpty
+                    ? const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Bugun bandlik yo‘q'),
+                        ),
+                      )
+                    : Card(
+                        child: Column(
+                          children: bookings
+                              .map(
+                                (booking) => ListTile(
+                                  leading: const Icon(Icons.schedule),
+                                  title: Text(
+                                    '${booking.startTime.format(context)} - ${booking.endTime.format(context)}',
+                                  ),
+                                  subtitle: Text(
+                                    booking.customerName ??
+                                        booking.customerPhone ??
+                                        'Mijoz',
+                                  ),
+                                  trailing: Text(
+                                    '${booking.price.toStringAsFixed(0)} so‘m',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -99,7 +123,11 @@ class StatsScreen extends ConsumerWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({required this.label, required this.value, required this.icon});
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   final String label;
   final String value;

@@ -26,14 +26,19 @@ class FieldsListScreen extends ConsumerWidget {
         onRefresh: () => ref.read(fieldsControllerProvider.notifier).refresh(),
         child: fieldsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ListView(children: [Center(child: Text('Xatolik: $e'))]),
+          error: (e, _) =>
+              ListView(children: [Center(child: Text('Xatolik: $e'))]),
           data: (fields) {
             if (fields.isEmpty) {
               return ListView(
                 children: const [
                   Padding(
                     padding: EdgeInsets.all(32),
-                    child: Center(child: Text('Hali maydon qo\'shilmagan. + tugmasini bosing.')),
+                    child: Center(
+                      child: Text(
+                        'Hali maydon qo\'shilmagan. + tugmasini bosing.',
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -61,7 +66,7 @@ class _FieldCard extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/fields/slots', extra: field),
+        onTap: () => context.push('/fields/edit', extra: field),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -73,24 +78,30 @@ class _FieldCard extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(field.name, style: Theme.of(context).textTheme.titleMedium),
+                          child: Text(
+                            field.name,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                         ),
                         if (!field.isActive)
                           const Chip(
-                            label: Text('O\'chirilgan', style: TextStyle(fontSize: 11)),
+                            label: Text(
+                              'O\'chirilgan',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             visualDensity: VisualDensity.compact,
                           ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${field.openingTime.format(context)} - ${field.closingTime.format(context)} · '
-                      '${field.slotDuration} daqiqa',
+                      '${field.size ?? 'O‘lcham kiritilmagan'} · '
+                      '${field.surfaceType == 'covered' ? 'Yopiq' : 'Ochiq'}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${field.pricePerSlot.toStringAsFixed(0)} so\'m / slot',
+                      '${field.pricePerHour.toStringAsFixed(0)} so‘m / soat',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

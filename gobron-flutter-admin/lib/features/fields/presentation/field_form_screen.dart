@@ -4,9 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../fields_controller.dart';
 import '../models/field.dart';
 
-/// Create/edit form for a field's profile and scheduling config
-/// (opening/closing time, slot duration, working days) — drives the
-/// backend's Slot Generation Engine.
 class FieldFormScreen extends ConsumerStatefulWidget {
   const FieldFormScreen({super.key, this.field});
 
@@ -19,12 +16,10 @@ class FieldFormScreen extends ConsumerStatefulWidget {
 class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
-  late final TextEditingController _addressController;
   late final TextEditingController _priceController;
-  late TimeOfDay _opening;
-  late TimeOfDay _closing;
-  late int _slotDuration;
-  late Set<int> _workingDays;
+  late final TextEditingController _sizeController;
+  late final TextEditingController _imagesController;
+  late String _surfaceType;
   late bool _isActive;
   bool _saving = false;
 
@@ -35,49 +30,39 @@ class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
     super.initState();
     final f = widget.field;
     _nameController = TextEditingController(text: f?.name ?? '');
-    _addressController = TextEditingController(text: f?.address ?? '');
-    _priceController = TextEditingController(text: f?.pricePerSlot.toStringAsFixed(0) ?? '');
-    _opening = f?.openingTime ?? const TimeOfDay(hour: 8, minute: 0);
-    _closing = f?.closingTime ?? const TimeOfDay(hour: 23, minute: 0);
-    _slotDuration = f?.slotDuration ?? 60;
-    _workingDays = (f?.workingDays ?? const [0, 1, 2, 3, 4, 5, 6]).toSet();
+    _priceController = TextEditingController(
+      text: f?.pricePerHour.toStringAsFixed(0) ?? '',
+    );
+    _sizeController = TextEditingController(text: f?.size ?? '');
+    _imagesController = TextEditingController(text: f?.images.join(', ') ?? '');
+    _surfaceType = f?.surfaceType ?? 'open';
     _isActive = f?.isActive ?? true;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _addressController.dispose();
     _priceController.dispose();
+    _sizeController.dispose();
+    _imagesController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickTime(bool isOpening) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: isOpening ? _opening : _closing,
-    );
-    if (picked == null) return;
-    setState(() => isOpening ? _opening = picked : _closing = picked);
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_workingDays.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Kamida bitta ish kunini tanlang')));
-      return;
-    }
-
     final field = Field(
       id: widget.field?.id,
       name: _nameController.text.trim(),
-      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-      openingTime: _opening,
-      closingTime: _closing,
-      slotDuration: _slotDuration,
-      workingDays: _workingDays.toList()..sort(),
-      pricePerSlot: double.parse(_priceController.text.trim()),
+      size: _sizeController.text.trim().isEmpty
+          ? null
+          : _sizeController.text.trim(),
+      surfaceType: _surfaceType,
+      pricePerHour: double.parse(_priceController.text.trim()),
+      images: _imagesController.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList(),
       peakPriceMultiplier: widget.field?.peakPriceMultiplier ?? 1.0,
       isActive: _isActive,
     );
@@ -85,14 +70,18 @@ class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
     setState(() => _saving = true);
     try {
       if (_isEditing) {
-        await ref.read(fieldsControllerProvider.notifier).updateField(widget.field!.id!, field);
+        await ref
+            .read(fieldsControllerProvider.notifier)
+            .updateField(widget.field!.id!, field);
       } else {
         await ref.read(fieldsControllerProvider.notifier).create(field);
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Xatolik: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Xatolik: $e')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -102,7 +91,9 @@ class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Maydonni tahrirlash' : 'Yangi maydon')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Maydonni tahrirlash' : 'Yangi maydon'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -111,78 +102,54 @@ class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Maydon nomi'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Nomini kiriting' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Nomini kiriting' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(labelText: 'Manzil'),
+              controller: _sizeController,
+              decoration: const InputDecoration(
+                labelText: 'O‘lchami',
+                hintText: '20x30',
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _priceController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Narxi (1 slot uchun, so\'m)'),
+              decoration: const InputDecoration(
+                labelText: 'Narxi (1 soat uchun, so‘m)',
+              ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Narxini kiriting';
-                return double.tryParse(v.trim()) == null ? 'Raqam kiriting' : null;
+                return double.tryParse(v.trim()) == null
+                    ? 'Raqam kiriting'
+                    : null;
               },
             ),
             const SizedBox(height: 24),
-            Text('Ish vaqti', style: Theme.of(context).textTheme.titleSmall),
+            Text('Maydon turi', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _pickTime(true),
-                    child: Text('Ochilish: ${_opening.format(context)}'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _pickTime(false),
-                    child: Text('Yopilish: ${_closing.format(context)}'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text('Slot davomiyligi', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            SegmentedButton<int>(
+            SegmentedButton<String>(
               segments: const [
-                ButtonSegment(value: 30, label: Text('30 daqiqa')),
-                ButtonSegment(value: 60, label: Text('60 daqiqa')),
+                ButtonSegment(value: 'open', label: Text('Ochiq')),
+                ButtonSegment(value: 'covered', label: Text('Yopiq')),
               ],
-              selected: {_slotDuration},
-              onSelectionChanged: (s) => setState(() => _slotDuration = s.first),
+              selected: {_surfaceType},
+              onSelectionChanged: (s) => setState(() => _surfaceType = s.first),
             ),
-            const SizedBox(height: 24),
-            Text('Ish kunlari', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: List.generate(7, (i) {
-                final selected = _workingDays.contains(i);
-                return FilterChip(
-                  label: Text(weekdayLabels[i]),
-                  selected: selected,
-                  onSelected: (v) => setState(() {
-                    if (v) {
-                      _workingDays.add(i);
-                    } else {
-                      _workingDays.remove(i);
-                    }
-                  }),
-                );
-              }),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _imagesController,
+              decoration: const InputDecoration(
+                labelText: 'Rasm URLlari',
+                hintText: 'https://... , https://...',
+              ),
             ),
             const SizedBox(height: 16),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Faol (bookinglar uchun ochiq)'),
+              title: const Text('Faol'),
               value: _isActive,
               onChanged: (v) => setState(() => _isActive = v),
             ),
@@ -191,7 +158,10 @@ class _FieldFormScreenState extends ConsumerState<FieldFormScreen> {
               onPressed: _saving ? null : _submit,
               child: _saving
                   ? const SizedBox(
-                      height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Saqlash'),
             ),
           ],
