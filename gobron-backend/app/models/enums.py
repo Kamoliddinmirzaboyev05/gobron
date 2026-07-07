@@ -21,6 +21,12 @@ class BookingStatus(str, enum.Enum):
     COMPLETED = "completed"    # slot time has passed
 
 
+class ManualBookingStatus(str, enum.Enum):
+    BOOKED = "booked"
+    CANCELLED = "cancelled"
+    COMPLETED = "completed"
+
+
 class RecurrenceType(str, enum.Enum):
     ONCE = "once"        # "Bir marta"
     DAILY = "daily"      # "Har kuni"

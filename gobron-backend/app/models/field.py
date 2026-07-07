@@ -30,6 +30,9 @@ class Field(Base):
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    venue_id: Mapped[int | None] = mapped_column(
+        ForeignKey("venues.id", ondelete="CASCADE"), index=True
+    )
 
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
@@ -53,6 +56,11 @@ class Field(Base):
 
     # Base price per slot; effective price may vary by time (see pricing logic).
     price_per_slot: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0"))
+    size: Mapped[str | None] = mapped_column(String(40))
+    surface_type: Mapped[str] = mapped_column(String(20), default="open", nullable=False)
+    price_per_hour: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), default=Decimal("0")
+    )
     # Optional premium multiplier applied to evening/peak hours.
     peak_start_time: Mapped[time | None] = mapped_column(Time)
     peak_price_multiplier: Mapped[Decimal] = mapped_column(
@@ -69,6 +77,7 @@ class Field(Base):
     )
 
     owner: Mapped["User"] = relationship(back_populates="fields")  # noqa: F821
+    venue: Mapped["Venue | None"] = relationship(back_populates="fields")  # noqa: F821
     slots: Mapped[list["Slot"]] = relationship(  # noqa: F821
         back_populates="field", cascade="all, delete-orphan"
     )

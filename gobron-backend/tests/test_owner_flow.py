@@ -102,3 +102,16 @@ async def test_phone_login_rejects_blocked_user():
 
     with pytest.raises(AuthError, match="bloklangan"):
         await service.login_with_phone("+998904440044")
+
+
+def test_owner_models_are_registered():
+    from app.models.field import Field
+    from app.models.manual_booking import ManualBooking
+    from app.models.venue import Venue
+
+    assert Venue.__tablename__ == "venues"
+    assert ManualBooking.__tablename__ == "manual_bookings"
+    assert hasattr(Field, "venue_id")
+    assert hasattr(Field, "size")
+    assert hasattr(Field, "surface_type")
+    assert hasattr(Field, "price_per_hour")
