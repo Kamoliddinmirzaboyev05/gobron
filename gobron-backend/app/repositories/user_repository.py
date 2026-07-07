@@ -76,3 +76,18 @@ class UserRepository:
             self.db.add(user)
             await self.db.flush()
         return user
+
+    async def create_field_owner_by_phone(self, phone: str, full_name: str) -> User:
+        parts = full_name.strip().split(maxsplit=1)
+        user = User(
+            phone=phone,
+            first_name=parts[0],
+            last_name=parts[1] if len(parts) > 1 else None,
+            role=UserRole.FIELD_OWNER,
+            is_active=True,
+            is_blocked=False,
+            is_onboarded=True,
+        )
+        self.db.add(user)
+        await self.db.flush()
+        return user

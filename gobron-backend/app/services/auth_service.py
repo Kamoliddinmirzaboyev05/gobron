@@ -47,6 +47,20 @@ class AuthService:
             raise AuthError("Hisob bloklangan")
         return self._tokens(user)
 
+    async def login_with_phone(
+        self, phone: str, full_name: str | None = None
+    ) -> dict:
+        """Temporary OTP-free login/registration for field owners."""
+        user = await self.users.get_by_phone(phone)
+        if user is None:
+            if not full_name or not full_name.strip():
+                raise AuthError("full_name is required for new phone registration")
+            user = await self.users.create_field_owner_by_phone(phone, full_name)
+        if user.is_blocked or not user.is_active:
+            raise AuthError("Hisob bloklangan")
+        await self.db.commit()
+        return self._tokens(user)
+
     async def login_with_telegram(self, init_data: str) -> dict:
         """Validate TMA initData and issue tokens for the onboarded user."""
         try:

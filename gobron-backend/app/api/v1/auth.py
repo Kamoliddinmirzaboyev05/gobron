@@ -7,6 +7,7 @@ from app.schemas.auth import (
     OTPRequest,
     OTPVerify,
     PasswordLogin,
+    PhoneLogin,
     RefreshRequest,
     TokenPair,
 )
@@ -27,6 +28,14 @@ async def login(body: PasswordLogin, db: DBSession):
         return await AuthService(db).login_with_password(body.username, body.password)
     except AuthError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc))
+
+
+@router.post("/phone-login", response_model=TokenPair)
+async def phone_login(body: PhoneLogin, db: DBSession):
+    try:
+        return await AuthService(db).login_with_phone(body.phone, body.full_name)
+    except AuthError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
 
 
 @router.post("/telegram", response_model=TokenPair)
