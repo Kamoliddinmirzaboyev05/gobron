@@ -8,6 +8,7 @@ from typing import Sequence
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision: str = "20260707_field_owner_redesign"
@@ -67,7 +68,7 @@ def upgrade() -> None:
         ondelete="CASCADE",
     )
 
-    manual_booking_status = sa.Enum(
+    manual_booking_status = postgresql.ENUM(
         "booked",
         "cancelled",
         "completed",
