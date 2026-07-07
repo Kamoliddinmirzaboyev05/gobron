@@ -68,7 +68,11 @@ def upgrade() -> None:
     )
 
     manual_booking_status = sa.Enum(
-        "booked", "cancelled", "completed", name="manual_booking_status"
+        "booked",
+        "cancelled",
+        "completed",
+        name="manual_booking_status",
+        create_type=False,
     )
     manual_booking_status.create(op.get_bind(), checkfirst=True)
     op.create_table(

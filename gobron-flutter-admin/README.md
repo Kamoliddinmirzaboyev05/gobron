@@ -1,7 +1,7 @@
 # gobron-flutter-admin
 
-Mobile app for Gobron field owners: manage fields, generate/block slots, and
-see today's/upcoming bookings and simple stats.
+Mobile app for Gobron field owners: configure their venue, manage fields,
+manually book time ranges, and see daily/weekly/monthly revenue stats.
 
 ## Stack
 
@@ -14,10 +14,7 @@ see today's/upcoming bookings and simple stats.
 
 No code generation (`freezed`/`json_serializable`) is used — models are plain
 Dart classes with hand-written `fromJson`/`toJson` that mirror the backend's
-Pydantic schemas 1:1. See `API_CONTRACT.md` for the exact endpoints this app
-expects from `gobron-backend`, including two that don't exist yet
-(owner-scoped bookings + stats — the backend only had player-scoped queries
-when this app was built).
+Pydantic schemas 1:1.
 
 ## Setup
 
@@ -26,8 +23,11 @@ flutter pub get
 cp .env.example .env   # set API_BASE_URL to your backend
 ```
 
-`10.0.2.2` is the Android emulator's alias for the host machine's `localhost`.
-On iOS simulator or a real device, use your machine's LAN IP instead.
+Production API:
+
+```env
+API_BASE_URL=https://gobronapi.webportfolio.uz/api/v1
+```
 
 ## Run
 
@@ -48,14 +48,15 @@ flutter test
 lib/
   core/            # config, dio client, secure token storage, router, theme
   features/
-    auth/           # phone + OTP login (field-owner role only)
-    fields/         # My Fields list + create/edit (opening/closing time, slot duration, working days)
-    slots/          # per-field slot calendar: generate / manual add / block-unblock
-    bookings/       # today's + upcoming bookings across the owner's fields
-    stats/          # revenue, occupancy, popular slots
-  shell/            # bottom-nav shell tying the four feature tabs together
+    auth/           # OTP-free phone login (field-owner role only)
+    venue/          # shared venue address, landmark, working days and hours
+    fields/         # My Fields list + create/edit (price, size, surface, images)
+    manual_bookings/# owner-created bookings while operations are manual
+    stats/          # dashboard revenue and today's bookings
+  shell/            # bottom-nav shell tying the feature tabs together
 ```
 
-Login is phone + OTP only (matches the backend's fallback auth path) — this
-app does not use Telegram `initData` login, since field owners install the
-app directly rather than opening it inside Telegram.
+Login is currently OTP-free phone login for field owners. Existing phone numbers
+log in; new phone numbers create a field-owner account when full name is
+provided. This is temporary and should be replaced by SMS verification before
+broad public rollout.

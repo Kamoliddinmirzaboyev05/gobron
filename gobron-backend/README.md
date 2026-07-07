@@ -82,8 +82,9 @@ python -m tests.test_slot_engine     # pure slot-tiling + pricing checks
 
 | Area     | Endpoints |
 |----------|-----------|
-| Auth     | `POST /auth/telegram`, `/auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET /auth/me` |
+| Auth     | `POST /auth/phone-login`, `POST /auth/login`, `POST /auth/telegram`, `/auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET /auth/me` |
 | Fields   | `GET /fields`, `GET /fields/{id}`, `POST/PATCH/DELETE /fields/{id}` (owner/admin) |
+| Owner    | `GET/PUT /owner/venue`, CRUD `/owner/fields`, CRUD `/owner/bookings`, `GET /owner/stats/summary` |
 | Slots    | `GET /fields/{id}/slots`, `POST /fields/{id}/slots/generate`, `POST /fields/{id}/slots`, `POST /slots/{id}/block|unblock` |
 | Bookings | `POST /bookings`, `GET /bookings`, `POST /bookings/{id}/cancel` |
 | Stats    | `GET /stats/dashboard` (owner sees own, superadmin sees all) |
@@ -92,5 +93,8 @@ python -m tests.test_slot_engine     # pure slot-tiling + pricing checks
 ## Notes / deliberate shortcuts
 
 - OTP store is in-memory (single worker); move to Redis to scale out.
+- `/auth/phone-login` is a temporary OTP-free login for field owners while the
+  owner app is being launched; replace it with SMS verification before broad
+  public rollout.
 - Broadcast sender is sequential (~20 msg/s); move to a queue for large audiences.
 - Payments (Click/Payme) models exist; provider callbacks are not wired yet.
