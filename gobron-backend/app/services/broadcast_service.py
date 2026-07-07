@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.broadcast import Broadcast
-from app.models.enums import BroadcastStatus
+from app.models.enums import BroadcastAudience, BroadcastStatus
 from app.repositories.user_repository import UserRepository
 
 _API = "https://api.telegram.org/bot{token}/{method}"
@@ -24,6 +24,10 @@ class BroadcastService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.users = UserRepository(db)
+
+    @staticmethod
+    def _includes_bot_users(bc: Broadcast) -> bool:
+        return bc.audience in (BroadcastAudience.BOT_USERS, BroadcastAudience.ALL)
 
     async def _send_one(
         self, client: httpx.AsyncClient, chat_id: int, bc: Broadcast
@@ -57,14 +61,15 @@ class BroadcastService:
         bc.status = BroadcastStatus.SENDING
         await self.db.commit()
 
-        recipients = await self.users.all_active_telegram_ids()
         sent = failed = 0
-        async with httpx.AsyncClient() as client:
-            for chat_id in recipients:
-                ok = await self._send_one(client, chat_id, bc)
-                sent += ok
-                failed += not ok
-                await asyncio.sleep(0.05)  # ~20 msg/s, safely under the limit
+        if self._includes_bot_users(bc):
+            recipients = await self.users.all_active_telegram_ids()
+            async with httpx.AsyncClient() as client:
+                for chat_id in recipients:
+                    ok = await self._send_one(client, chat_id, bc)
+                    sent += ok
+                    failed += not ok
+                    await asyncio.sleep(0.05)  # ~20 msg/s, safely under the limit
 
         bc.sent_count = sent
         bc.failed_count = failed

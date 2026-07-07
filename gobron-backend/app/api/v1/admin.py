@@ -12,6 +12,7 @@ from app.core.deps import DBSession, require_role
 from app.models.broadcast import Broadcast
 from app.models.enums import BookingStatus, UserRole
 from app.models.field_owner import FieldOwner
+from app.models.user import User
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.booking import AdminBookingOut
@@ -20,10 +21,12 @@ from app.schemas.field_owner import FieldOwnerCreate, FieldOwnerOut, FieldOwnerU
 from app.schemas.user import UserOut
 from app.services.broadcast_service import BroadcastService
 
+_superadmin = require_role(UserRole.SUPERADMIN)
+
 router = APIRouter(
     prefix="/admin",
     tags=["admin"],
-    dependencies=[Depends(require_role(UserRole.SUPERADMIN))],
+    dependencies=[Depends(_superadmin)],
 )
 
 # --- Users & admins ---
@@ -187,10 +190,16 @@ async def create_broadcast(
     body: BroadcastCreate,
     db: DBSession,
     background: BackgroundTasks,
+    user: User = Depends(_superadmin),
     send_now: bool = True,
 ):
     """Create a post (image optional) and, by default, start delivery."""
-    bc = Broadcast(text=body.text, image_url=body.image_url)
+    bc = Broadcast(
+        created_by=user.id,
+        text=body.text,
+        image_url=body.image_url,
+        audience=body.audience,
+    )
     db.add(bc)
     await db.commit()
     await db.refresh(bc)

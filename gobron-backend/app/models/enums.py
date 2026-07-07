@@ -51,3 +51,9 @@ class BroadcastStatus(str, enum.Enum):
     SENDING = "sending"    # delivery in progress
     SENT = "sent"          # finished
     FAILED = "failed"
+
+
+class BroadcastAudience(str, enum.Enum):
+    BOT_USERS = "bot_users"
+    FIELD_OWNERS = "field_owners"
+    ALL = "all"

@@ -10,7 +10,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.models.enums import BroadcastStatus
+from app.models.enums import BroadcastAudience, BroadcastStatus
 
 
 class Broadcast(Base):
@@ -24,6 +24,16 @@ class Broadcast(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     # Optional photo: a URL or Telegram file_id. Null => text-only post.
     image_url: Mapped[str | None] = mapped_column(String(500))
+
+    audience: Mapped[BroadcastAudience] = mapped_column(
+        Enum(
+            BroadcastAudience,
+            name="broadcast_audience",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=BroadcastAudience.BOT_USERS,
+        nullable=False,
+    )
 
     status: Mapped[BroadcastStatus] = mapped_column(
         Enum(BroadcastStatus, name="broadcast_status"),
