@@ -4,7 +4,6 @@ import {
   useSubscriptionPayments,
   useApproveSubscriptionPayment,
   useRejectSubscriptionPayment,
-  type SubscriptionPayment
 } from '../hooks/useSubscriptionPayments'
 import { Badge, Spinner, Empty } from '../components/ui'
 

@@ -1,13 +1,17 @@
 import type { Booking, BookingStatus } from '../types'
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
-  booked: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
-  cancelled: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300',
-  completed: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300',
+  pending:   'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300',
+  confirmed: 'bg-blue-100  dark:bg-blue-900/40   text-blue-700   dark:text-blue-300',
+  booked:    'bg-green-100 dark:bg-green-900/40  text-green-700  dark:text-green-300',
+  cancelled: 'bg-red-100   dark:bg-red-900/40    text-red-600    dark:text-red-300',
+  completed: 'bg-gray-100  dark:bg-gray-700      text-gray-500   dark:text-gray-300',
 }
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
-  booked: 'Band qilingan',
+  pending:   'Kutilmoqda',
+  confirmed: 'Tasdiqlangan',
+  booked:    'Band qilingan',
   cancelled: 'Bekor qilingan',
   completed: 'Tugallangan',
 }

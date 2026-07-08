@@ -8,7 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-import app.models  # noqa: F401  (register mappers)
+import app.models  # noqa: F401,F811 — side-effect import: registers SQLAlchemy mappers
+_ = app.models  # prevent pyflakes "redefinition of unused 'app'" false-positive
 from app.api.v1.router import api_router
 from app.core.config import settings
 
