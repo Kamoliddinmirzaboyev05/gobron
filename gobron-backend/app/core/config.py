@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
+    # Public origin this API is reachable at — used to build absolute upload URLs.
+    PUBLIC_BASE_URL: str = "http://localhost:8000"
 
     # --- Database ---
     # Async driver (asyncpg) is used everywhere in the app.

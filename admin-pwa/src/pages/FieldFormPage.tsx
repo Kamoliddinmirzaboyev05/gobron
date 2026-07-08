@@ -1,6 +1,7 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useRef } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { createField, updateField } from '../api/fields'
+import { uploadImage } from '../api/media'
 import type { Field } from '../types'
 
 export default function FieldFormPage() {
@@ -13,11 +14,32 @@ export default function FieldFormPage() {
   const [name, setName] = useState(existingField?.name ?? '')
   const [size, setSize] = useState(existingField?.size ?? '')
   const [price, setPrice] = useState(existingField?.pricePerHour?.toString() ?? '')
-  const [images, setImages] = useState(existingField?.images.join(', ') ?? '')
+  const [images, setImages] = useState<string[]>(existingField?.images ?? [])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [surfaceType, setSurfaceType] = useState<'open' | 'covered'>(existingField?.surfaceType ?? 'open')
   const [isActive, setIsActive] = useState(existingField?.isActive ?? true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await Promise.all(files.map(uploadImage))
+      setImages((prev) => [...prev, ...urls])
+    } catch {
+      setErrors((prev) => ({ ...prev, images: "Rasmni yuklab bo'lmadi. Qayta urinib ko'ring." }))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url))
+  }
 
   function validate(): boolean {
     const e: Record<string, string> = {}
@@ -37,10 +59,7 @@ export default function FieldFormPage() {
       size: size.trim() || undefined,
       pricePerHour: Number(price),
       surfaceType,
-      images: images
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean),
+      images,
       peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
       isActive,
     }
@@ -136,13 +155,43 @@ export default function FieldFormPage() {
 
           {/* Images */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rasm URLlari</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rasmlar</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {images.map((url) => (
+                <div key={url} className="relative w-20 h-20 rounded-btn overflow-hidden border border-gray-200">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-5"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-20 h-20 rounded-btn border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-2xl"
+              >
+                {uploading ? (
+                  <svg className="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : '+'}
+              </button>
+            </div>
             <input
-              className="input-field"
-              placeholder="https://... , https://..."
-              value={images}
-              onChange={(e) => setImages(e.target.value)}
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              hidden
+              onChange={handleFilesSelected}
             />
+            {errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}
           </div>
 
           {/* Active toggle */}
