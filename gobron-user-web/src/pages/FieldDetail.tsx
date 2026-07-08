@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Star, Check } from "lucide-react";
-import { useField } from "../hooks/useFields";
+import { useField, useFields } from "../hooks/useFields";
 import { useSlots } from "../hooks/useSlots";
 import { useCreateBooking } from "../hooks/useBookings";
 import { formatPrice, nextDays, shortTime } from "../lib/format";
@@ -17,7 +17,15 @@ const RECURRENCE: { value: RecurrenceType; label: string }[] = [
 export default function FieldDetail() {
   const { id } = useParams();
   const fieldId = Number(id);
+  const navigate = useNavigate();
+  
   const { data: field, isLoading, error } = useField(fieldId);
+  const { data: allFields } = useFields();
+  
+  const siblingFields = useMemo(() => {
+    if (!field || !allFields) return [];
+    return allFields.filter(f => f.owner_id === field.owner_id);
+  }, [field, allFields]);
 
   const days = useMemo(() => nextDays(14), []);
   const [date, setDate] = useState(days[0].iso);
@@ -64,7 +72,29 @@ export default function FieldDetail() {
       </div>
 
       <div className="px-4 py-4">
-        <div className="flex items-start justify-between gap-2">
+        {/* Sibling fields tabs */}
+        {siblingFields.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-2 hide-scrollbar border-b border-gray-100">
+            {siblingFields.map(sf => (
+              <button
+                key={sf.id}
+                onClick={() => {
+                  setSelected(null);
+                  navigate(`/fields/${sf.id}`, { replace: true });
+                }}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                  sf.id === field.id
+                    ? "bg-pitch-600 text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {sf.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-start justify-between gap-2 mt-2">
           <h1 className="text-xl font-bold">{field.name}</h1>
           <span className="flex shrink-0 items-center gap-1 text-sm font-medium">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -183,7 +213,7 @@ export default function FieldDetail() {
               className="flex items-center gap-2 rounded-xl bg-pitch-600 px-6 py-3 font-semibold text-white disabled:opacity-60"
             >
               <Check className="h-5 w-5" />
-              {createBooking.isPending ? "..." : "Bron qilish"}
+              {createBooking.isPending ? "..." : "So'rov yuborish"}
             </button>
           </div>
         </div>

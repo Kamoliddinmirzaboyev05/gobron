@@ -5,12 +5,16 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
-from app.models.enums import ManualBookingStatus
+from app.models.enums import ManualBookingStatus, BookingStatus, SlotStatus
 from app.models.field import Field
 from app.models.manual_booking import ManualBooking
+from app.models.booking import Booking
+from app.models.slot import Slot
 from app.models.user import User
 from app.models.venue import Venue
+from app.models.subscription_payment import SubscriptionPayment
 from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingUpdate,
@@ -78,6 +82,7 @@ class OwnerService:
             closing_time=venue.closing_time,
             working_days=venue.working_days,
             is_active=body.is_active,
+            booking_window_days=body.booking_window_days,
         )
         self.db.add(field)
         await self.db.commit()
@@ -158,6 +163,49 @@ class OwnerService:
     async def complete_booking(self, owner: User, booking_id: int) -> ManualBooking:
         booking = await self._get_owned_booking(owner, booking_id)
         booking.status = ManualBookingStatus.COMPLETED
+        await self.db.commit()
+        await self.db.refresh(booking)
+        return booking
+
+    async def list_booking_requests(self, owner: User) -> list[Booking]:
+        stmt = (
+            select(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .options(joinedload(Booking.user), joinedload(Booking.slot))
+            .where(
+                Field.owner_id == owner.id,
+                Booking.status == BookingStatus.PENDING,
+            )
+            .order_by(Booking.created_at.desc())
+        )
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def _get_owned_booking_request(self, owner: User, booking_id: int) -> Booking:
+        stmt = (
+            select(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .options(joinedload(Booking.user), joinedload(Booking.slot))
+            .where(Field.owner_id == owner.id, Booking.id == booking_id)
+        )
+        booking = (await self.db.execute(stmt)).scalar_one_or_none()
+        if not booking:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Booking request not found")
+        return booking
+
+    async def accept_booking_request(self, owner: User, booking_id: int) -> Booking:
+        booking = await self._get_owned_booking_request(owner, booking_id)
+        booking.status = BookingStatus.CONFIRMED
+        await self.db.commit()
+        await self.db.refresh(booking)
+        return booking
+
+    async def reject_booking_request(self, owner: User, booking_id: int) -> Booking:
+        booking = await self._get_owned_booking_request(owner, booking_id)
+        booking.status = BookingStatus.CANCELLED
+        if booking.slot:
+            booking.slot.status = SlotStatus.AVAILABLE
         await self.db.commit()
         await self.db.refresh(booking)
         return booking
@@ -258,3 +306,14 @@ class OwnerService:
             ManualBooking.booking_date <= end_date,
             ManualBooking.status != ManualBookingStatus.CANCELLED,
         )
+
+    async def list_subscription_payments(self, owner: User) -> list[SubscriptionPayment]:
+        stmt = select(SubscriptionPayment).where(SubscriptionPayment.owner_id == owner.id).order_by(SubscriptionPayment.created_at.desc())
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def create_subscription_payment(self, owner: User, amount: Decimal, receipt_image: str) -> SubscriptionPayment:
+        payment = SubscriptionPayment(owner_id=owner.id, amount=amount, receipt_image=receipt_image)
+        self.db.add(payment)
+        await self.db.commit()
+        await self.db.refresh(payment)
+        return payment

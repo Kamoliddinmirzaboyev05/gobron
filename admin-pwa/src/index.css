@@ -9,7 +9,7 @@
   }
 
   body {
-    @apply bg-scaffold text-gray-900 font-sans;
+    @apply bg-scaffold text-gray-900 font-sans dark:bg-gray-900 dark:text-gray-100;
     overscroll-behavior: none;
   }
 
@@ -17,14 +17,20 @@
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
+    padding-top: env(safe-area-inset-top);
   }
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @layer components {
   .input-field {
     @apply w-full border border-gray-300 rounded-input px-4 py-3 text-base
            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
-           placeholder:text-gray-400 bg-white;
+           placeholder:text-gray-400 bg-white
+           dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100;
   }
 
   .btn-primary {
@@ -34,7 +40,7 @@
   }
 
   .card {
-    @apply bg-white rounded-card shadow-sm;
+    @apply bg-white rounded-card shadow-sm dark:bg-gray-800;
   }
 
   .stat-tile {
@@ -44,4 +50,16 @@
   .chip {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
+}
+
+/* Native date/time picker glyphs default to black — invisible on a dark input. */
+.dark input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+/* Autofill keeps its own white background/black text regardless of theme. */
+.dark input:-webkit-autofill {
+  -webkit-text-fill-color: theme('colors.gray.100');
+  -webkit-box-shadow: 0 0 0px 1000px theme('colors.gray.800') inset;
+  caret-color: theme('colors.gray.100');
 }

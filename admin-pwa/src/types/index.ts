@@ -32,6 +32,8 @@ export interface Field {
   peakPriceMultiplier: number
   isActive: boolean
   rating?: number
+  /** How many days ahead (including today) the manual-booking picker opens. */
+  bookingWindowDays: number
 }
 
 export const WEEKDAY_LABELS = ['Dush', 'Sesh', 'Chor', 'Pay', 'Juma', 'Shan', 'Yak']
@@ -51,7 +53,7 @@ export interface Venue {
 
 // ─── Booking ────────────────────────────────────────────────────────────────
 
-export type BookingStatus = 'booked' | 'cancelled' | 'completed'
+export type BookingStatus = 'pending' | 'confirmed' | 'booked' | 'cancelled' | 'completed'
 
 export interface Booking {
   id: string
@@ -65,6 +67,28 @@ export interface Booking {
   price: number
   status: BookingStatus
   note?: string
+}
+
+export interface AdminBookingRequest {
+  id: string
+  userId: string
+  slotId: string
+  status: BookingStatus
+  totalPrice: number
+  createdAt: string
+  user?: {
+    id: number
+    phone: string
+    firstName?: string
+    lastName?: string
+  }
+  slot?: {
+    id: number
+    field_id: number
+    slot_date: string
+    start_time: string
+    end_time: string
+  }
 }
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────

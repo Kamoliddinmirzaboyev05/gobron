@@ -13,6 +13,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     generate_otp,
+    hash_password,
     validate_telegram_init_data,
     verify_otp,
     verify_password,
@@ -48,14 +49,27 @@ class AuthService:
         return self._tokens(user)
 
     async def login_with_phone(
-        self, phone: str, full_name: str | None = None
+        self,
+        phone: str,
+        full_name: str | None = None,
+        password: str | None = None,
     ) -> dict:
-        """Temporary OTP-free login/registration for field owners."""
+        """Phone login/registration for field owners.
+
+        `full_name` present + no existing user -> register (password saved
+        if given). Existing user with a password set -> password required
+        to log back in. Existing user without a password (pre-password
+        accounts, e.g. flutter-admin) keeps logging in with just the phone.
+        """
         user = await self.users.get_by_phone(phone)
         if user is None:
             if not full_name or not full_name.strip():
                 raise AuthError("full_name is required for new phone registration")
-            user = await self.users.create_field_owner_by_phone(phone, full_name)
+            hashed = hash_password(password) if password else None
+            user = await self.users.create_field_owner_by_phone(phone, full_name, hashed)
+        elif user.hashed_password:
+            if not password or not verify_password(password, user.hashed_password):
+                raise AuthError("Login yoki parol noto'g'ri")
         if user.is_blocked or not user.is_active:
             raise AuthError("Hisob bloklangan")
         await self.db.commit()

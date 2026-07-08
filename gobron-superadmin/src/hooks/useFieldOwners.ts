@@ -46,3 +46,11 @@ export function useDeleteFieldOwner() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["field-owners"] }),
   });
 }
+
+export function useToggleFieldOwnerActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.post(`/admin/field-owners/${id}/toggle-active`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["field-owners"] }),
+  });
+}

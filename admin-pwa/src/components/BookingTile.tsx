@@ -1,9 +1,9 @@
 import type { Booking, BookingStatus } from '../types'
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
-  booked: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-600',
-  completed: 'bg-gray-100 text-gray-500',
+  booked: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+  cancelled: 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300',
+  completed: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300',
 }
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
@@ -33,12 +33,13 @@ export default function BookingTile({ booking: b }: { booking: Booking }) {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 truncate">{b.customerName}</p>
-        <p className="text-sm text-gray-500">
+        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{b.customerName}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5 truncate">{b.customerPhone}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {b.date} · {b.startTime}–{b.endTime}
         </p>
         {b.fieldName && (
-          <p className="text-xs text-gray-400 truncate">{b.fieldName}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{b.fieldName}</p>
         )}
       </div>
 

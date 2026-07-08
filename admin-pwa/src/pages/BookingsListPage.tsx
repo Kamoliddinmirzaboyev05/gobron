@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
-import { fetchBookings, createManualBooking } from '../api/bookings'
+import { fetchBookings } from '../api/bookings'
 import { fetchFields } from '../api/fields'
-import type { Booking, Field, ManualBookingInput } from '../types'
+import type { Booking, Field } from '../types'
 import { useLoad } from '../hooks/useLoad'
-import ManualBookingModal from '../components/ManualBookingModal'
+import SlotBookingModal from '../components/SlotBookingModal'
 import BookingTile from '../components/BookingTile'
+import TopBar from '../components/TopBar'
 
 type Bucket = 'faol' | 'hammasi' | 'tarix'
 
@@ -44,8 +45,7 @@ export default function BookingsListPage() {
   const today = todayString()
   const filtered = (bookings ?? []).filter((b) => matchesBucket(b, bucket, today))
 
-  async function handleCreateBooking(input: ManualBookingInput) {
-    await createManualBooking(input)
+  function handleBooked() {
     setShowBookingModal(false)
     setBucket('faol')
     refresh()
@@ -53,13 +53,10 @@ export default function BookingsListPage() {
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* AppBar */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">Bandliklar</h1>
-      </div>
+      <TopBar title="Bandliklar" />
 
       {/* Filter chips */}
-      <div className="flex gap-2 px-4 py-3 bg-white border-b border-gray-100">
+      <div className="flex gap-2 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
         {BUCKETS.map(({ key, label }) => (
           <button
             key={key}
@@ -67,7 +64,7 @@ export default function BookingsListPage() {
             className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-colors ${
               bucket === key
                 ? 'border-primary bg-primary text-white'
-                : 'border-gray-200 bg-white text-gray-600'
+                : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'
             }`}
           >
             {label}
@@ -77,7 +74,7 @@ export default function BookingsListPage() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {loading && !bookings ? (
-          <div className="card p-6 text-center text-gray-400 text-sm">Yuklanmoqda...</div>
+          <div className="card p-6 text-center text-gray-400 dark:text-gray-500 text-sm">Yuklanmoqda...</div>
         ) : filtered.length > 0 ? (
           <div className="flex flex-col gap-2">
             {filtered.map((b) => (
@@ -88,7 +85,7 @@ export default function BookingsListPage() {
             ))}
           </div>
         ) : (
-          <div className="card p-8 text-center text-gray-400">
+          <div className="card p-8 text-center text-gray-400 dark:text-gray-500">
             <p>{EMPTY_LABEL[bucket]}</p>
           </div>
         )}
@@ -97,16 +94,16 @@ export default function BookingsListPage() {
       {/* FAB */}
       <button
         onClick={() => setShowBookingModal(true)}
-        className="fixed bottom-20 right-4 bg-primary text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-40 active:scale-95 transition-transform"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 bg-primary text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-40 active:scale-95 transition-transform"
         aria-label="Band qilish"
       >
         <PlusIcon />
       </button>
 
       {showBookingModal && (
-        <ManualBookingModal
+        <SlotBookingModal
           fields={fields ?? []}
-          onConfirm={handleCreateBooking}
+          onBooked={handleBooked}
           onClose={() => setShowBookingModal(false)}
         />
       )}

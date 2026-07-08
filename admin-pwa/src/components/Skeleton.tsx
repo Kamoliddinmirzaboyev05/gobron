@@ -3,7 +3,7 @@
 export function Skeleton({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-gray-200 rounded-lg ${className}`}
+      className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`}
     />
   )
 }
@@ -97,7 +97,7 @@ export function FieldsListSkeleton() {
 
 export function NotificationItemSkeleton() {
   return (
-    <div className="bg-white border-b border-gray-100">
+    <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
       <Skeleton className="w-full h-[150px] rounded-none" />
       <div className="px-4 py-3 flex flex-col gap-2">
         <Skeleton className="h-4 w-48" />
@@ -111,7 +111,7 @@ export function NotificationItemSkeleton() {
 
 export function NotificationsListSkeleton() {
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-gray-100 dark:divide-gray-700">
       {Array.from({ length: 4 }).map((_, i) => (
         <NotificationItemSkeleton key={i} />
       ))}

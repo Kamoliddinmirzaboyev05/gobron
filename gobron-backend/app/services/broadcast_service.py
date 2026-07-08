@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.models.broadcast import Broadcast
 from app.models.enums import BroadcastAudience, BroadcastStatus
 from app.repositories.user_repository import UserRepository
+from app.services.push_service import PushService
 
 _API = "https://api.telegram.org/bot{token}/{method}"
 
@@ -24,10 +25,15 @@ class BroadcastService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.users = UserRepository(db)
+        self.push = PushService(db)
 
     @staticmethod
     def _includes_bot_users(bc: Broadcast) -> bool:
         return bc.audience in (BroadcastAudience.BOT_USERS, BroadcastAudience.ALL)
+
+    @staticmethod
+    def _includes_field_owners(bc: Broadcast) -> bool:
+        return bc.audience in (BroadcastAudience.FIELD_OWNERS, BroadcastAudience.ALL)
 
     async def _send_one(
         self, client: httpx.AsyncClient, chat_id: int, bc: Broadcast

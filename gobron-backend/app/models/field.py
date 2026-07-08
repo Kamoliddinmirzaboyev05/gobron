@@ -53,6 +53,8 @@ class Field(Base):
     working_days: Mapped[list[int]] = mapped_column(
         ARRAY(Integer), default=lambda: [0, 1, 2, 3, 4, 5, 6]
     )
+    # How many days ahead (including today) the manual-booking picker opens.
+    booking_window_days: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
 
     # Base price per slot; effective price may vary by time (see pricing logic).
     price_per_slot: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0"))

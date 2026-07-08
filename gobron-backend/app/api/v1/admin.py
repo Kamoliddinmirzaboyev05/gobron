@@ -19,7 +19,10 @@ from app.schemas.booking import AdminBookingOut
 from app.schemas.broadcast import BroadcastCreate, BroadcastOut
 from app.schemas.field_owner import FieldOwnerCreate, FieldOwnerOut, FieldOwnerUpdate
 from app.schemas.user import UserOut
+from app.schemas.subscription import SubscriptionPaymentAdminOut
 from app.services.broadcast_service import BroadcastService
+from app.models.subscription_payment import SubscriptionPayment
+from app.models.field import Field
 
 _superadmin = require_role(UserRole.SUPERADMIN)
 
@@ -143,6 +146,83 @@ async def delete_field_owner(field_owner_id: int, db: DBSession):
     owner = await _get_field_owner(field_owner_id, db)
     await db.delete(owner)
     await db.commit()
+
+
+@router.post("/field-owners/{field_owner_id}/toggle-active", response_model=FieldOwnerOut)
+async def toggle_field_owner_fields(field_owner_id: int, db: DBSession):
+    owner = await _get_field_owner(field_owner_id, db)
+    # Get all fields for this owner's user ID
+    user_fields = await db.execute(select(Field).where(Field.owner_id == owner.user_id))
+    fields = user_fields.scalars().all()
+    
+    # Toggle isActive based on first field or just turn them off
+    # Actually just deactivate them if active, activate if inactive
+    if not fields:
+        return owner
+    
+    current_active = fields[0].is_active
+    new_active = not current_active
+    for f in fields:
+        f.is_active = new_active
+        
+    await db.commit()
+    return owner
+
+
+# --- Subscription Payments ---
+
+@router.get("/subscription-payments", response_model=list[SubscriptionPaymentAdminOut])
+async def list_subscription_payments(db: DBSession, limit: int = Query(100, le=200)):
+    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).order_by(SubscriptionPayment.created_at.desc()).limit(limit)
+    rows = (await db.execute(stmt)).all()
+    
+    result = []
+    for payment, user in rows:
+        payment_dict = payment.__dict__.copy()
+        payment_dict["owner_phone"] = user.phone
+        payment_dict["owner_name"] = user.full_name or user.first_name
+        result.append(payment_dict)
+    return result
+
+@router.post("/subscription-payments/{payment_id}/approve", response_model=SubscriptionPaymentAdminOut)
+async def approve_subscription_payment(payment_id: int, db: DBSession):
+    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).where(SubscriptionPayment.id == payment_id)
+    row = (await db.execute(stmt)).first()
+    if not row:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+        
+    payment, user = row
+    payment.status = "approved"
+    
+    # Optionally, activate their fields
+    user_fields = await db.execute(select(Field).where(Field.owner_id == user.id))
+    for f in user_fields.scalars().all():
+        f.is_active = True
+        
+    await db.commit()
+    await db.refresh(payment)
+    
+    payment_dict = payment.__dict__.copy()
+    payment_dict["owner_phone"] = user.phone
+    payment_dict["owner_name"] = user.full_name or user.first_name
+    return payment_dict
+
+@router.post("/subscription-payments/{payment_id}/reject", response_model=SubscriptionPaymentAdminOut)
+async def reject_subscription_payment(payment_id: int, db: DBSession):
+    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).where(SubscriptionPayment.id == payment_id)
+    row = (await db.execute(stmt)).first()
+    if not row:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
+        
+    payment, user = row
+    payment.status = "rejected"
+    await db.commit()
+    await db.refresh(payment)
+    
+    payment_dict = payment.__dict__.copy()
+    payment_dict["owner_phone"] = user.phone
+    payment_dict["owner_name"] = user.full_name or user.first_name
+    return payment_dict
 
 
 # --- Bookings (all users) ---

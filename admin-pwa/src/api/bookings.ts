@@ -55,3 +55,18 @@ export async function createManualBooking(input: ManualBookingInput): Promise<Bo
   })
   return fromApi(data)
 }
+
+export async function fetchRequests(): Promise<any[]> {
+  const { data } = await api.get('/owner/requests')
+  return data
+}
+
+export async function acceptRequest(bookingId: string): Promise<any> {
+  const { data } = await api.post(`/owner/requests/${bookingId}/accept`)
+  return data
+}
+
+export async function rejectRequest(bookingId: string): Promise<any> {
+  const { data } = await api.post(`/owner/requests/${bookingId}/reject`)
+  return data
+}

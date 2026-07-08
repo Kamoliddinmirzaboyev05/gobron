@@ -3,6 +3,13 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { createField, updateField } from '../api/fields'
 import { uploadImage } from '../api/media'
 import type { Field } from '../types'
+import { extractDigits, formatThousands } from '../utils/number'
+
+/** "20x30" -> ["20", "30"]; anything else parses to blanks. */
+function parseSize(size: string | undefined): [string, string] {
+  const match = size?.match(/^(\d+)\s*x\s*(\d+)$/i)
+  return match ? [match[1], match[2]] : ['', '']
+}
 
 export default function FieldFormPage() {
   const navigate = useNavigate()
@@ -10,15 +17,20 @@ export default function FieldFormPage() {
   const { id } = useParams<{ id: string }>()
   const existingField = location.state?.field as Field | undefined
   const isEditing = !!existingField
+  const [initialLength, initialWidth] = parseSize(existingField?.size)
 
   const [name, setName] = useState(existingField?.name ?? '')
-  const [size, setSize] = useState(existingField?.size ?? '')
+  const [length, setLength] = useState(initialLength)
+  const [width, setWidth] = useState(initialWidth)
   const [price, setPrice] = useState(existingField?.pricePerHour?.toString() ?? '')
   const [images, setImages] = useState<string[]>(existingField?.images ?? [])
-  const [uploading, setUploading] = useState(false)
+  const [pendingUploads, setPendingUploads] = useState<{ id: string; progress: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [surfaceType, setSurfaceType] = useState<'open' | 'covered'>(existingField?.surfaceType ?? 'open')
   const [isActive, setIsActive] = useState(existingField?.isActive ?? true)
+  const [bookingWindowDays, setBookingWindowDays] = useState(
+    existingField?.bookingWindowDays?.toString() ?? '3'
+  )
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -26,15 +38,24 @@ export default function FieldFormPage() {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     if (!files.length) return
-    setUploading(true)
-    try {
-      const urls = await Promise.all(files.map(uploadImage))
-      setImages((prev) => [...prev, ...urls])
-    } catch {
-      setErrors((prev) => ({ ...prev, images: "Rasmni yuklab bo'lmadi. Qayta urinib ko'ring." }))
-    } finally {
-      setUploading(false)
-    }
+
+    const entries = files.map((file) => ({ id: `${Date.now()}-${Math.random()}`, file }))
+    setPendingUploads((prev) => [...prev, ...entries.map(({ id }) => ({ id, progress: 0 }))])
+
+    await Promise.all(
+      entries.map(async ({ id, file }) => {
+        try {
+          const url = await uploadImage(file, (percent) => {
+            setPendingUploads((prev) => prev.map((p) => (p.id === id ? { ...p, progress: percent } : p)))
+          })
+          setImages((prev) => [...prev, url])
+        } catch {
+          setErrors((prev) => ({ ...prev, images: "Rasmni yuklab bo'lmadi. Qayta urinib ko'ring." }))
+        } finally {
+          setPendingUploads((prev) => prev.filter((p) => p.id !== id))
+        }
+      })
+    )
   }
 
   function removeImage(url: string) {
@@ -46,6 +67,7 @@ export default function FieldFormPage() {
     if (!name.trim()) e.name = 'Nomini kiriting'
     if (!price.trim()) e.price = 'Narxini kiriting'
     else if (isNaN(Number(price))) e.price = 'Raqam kiriting'
+    if (!bookingWindowDays.trim() || Number(bookingWindowDays) < 1) e.bookingWindowDays = 'Kamida 1 kun'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -56,12 +78,13 @@ export default function FieldFormPage() {
 
     const field: Omit<Field, 'id' | 'venueId'> = {
       name: name.trim(),
-      size: size.trim() || undefined,
+      size: length.trim() && width.trim() ? `${length.trim()}x${width.trim()}` : undefined,
       pricePerHour: Number(price),
       surfaceType,
       images,
       peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
       isActive,
+      bookingWindowDays: Number(bookingWindowDays),
     }
 
     setSaving(true)
@@ -80,13 +103,13 @@ export default function FieldFormPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-scaffold">
+    <div className="flex flex-col min-h-full bg-scaffold dark:bg-gray-900">
       {/* AppBar */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-gray-600">
+      <div className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="p-1 -ml-1 text-gray-600 dark:text-gray-300">
           <BackIcon />
         </button>
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {isEditing ? 'Maydonni tahrirlash' : 'Yangi maydon'}
         </h1>
       </div>
@@ -95,7 +118,7 @@ export default function FieldFormPage() {
         <div className="p-4 flex flex-col gap-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Maydon nomi</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Maydon nomi</label>
             <input
               className="input-field"
               placeholder="Maydon 1"
@@ -106,35 +129,69 @@ export default function FieldFormPage() {
           </div>
 
           {/* Size */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">O'lchami</label>
-            <input
-              className="input-field"
-              placeholder="20x30"
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Bo'yi (m)</label>
+              <input
+                className="input-field"
+                type="number"
+                inputMode="numeric"
+                placeholder="20"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Eni (m)</label>
+              <input
+                className="input-field"
+                type="number"
+                inputMode="numeric"
+                placeholder="30"
+                value={width}
+                onChange={(e) => setWidth(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Price */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               {"Narxi (1 soat uchun, so'm)"}
+            </label>
+            <input
+              className="input-field"
+              type="text"
+              inputMode="numeric"
+              placeholder="100 000"
+              value={formatThousands(price)}
+              onChange={(e) => setPrice(extractDigits(e.target.value))}
+            />
+            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+          </div>
+
+          {/* Booking window */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Necha kun oldindan qo'lda band qilish mumkin
             </label>
             <input
               className="input-field"
               type="number"
               inputMode="numeric"
-              placeholder="100000"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              min={1}
+              placeholder="3"
+              value={bookingWindowDays}
+              onChange={(e) => setBookingWindowDays(e.target.value)}
             />
-            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+            {errors.bookingWindowDays && (
+              <p className="text-red-500 text-xs mt-1">{errors.bookingWindowDays}</p>
+            )}
           </div>
 
           {/* Surface type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Maydon turi</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Maydon turi</label>
             <div className="grid grid-cols-2 gap-2">
               {(['open', 'covered'] as const).map((type) => (
                 <button
@@ -144,7 +201,7 @@ export default function FieldFormPage() {
                   className={`py-2.5 rounded-btn text-sm font-medium border-2 transition-colors ${
                     surfaceType === type
                       ? 'border-primary bg-primary-light text-primary'
-                      : 'border-gray-200 bg-white text-gray-600'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'
                   }`}
                 >
                   {type === 'open' ? 'Ochiq' : 'Yopiq'}
@@ -155,10 +212,10 @@ export default function FieldFormPage() {
 
           {/* Images */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rasmlar</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Rasmlar</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {images.map((url) => (
-                <div key={url} className="relative w-20 h-20 rounded-btn overflow-hidden border border-gray-200">
+                <div key={url} className="relative w-20 h-20 rounded-btn overflow-hidden border border-gray-200 dark:border-gray-600">
                   <img src={url} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -169,18 +226,27 @@ export default function FieldFormPage() {
                   </button>
                 </div>
               ))}
+              {pendingUploads.map(({ id, progress }) => (
+                <div
+                  key={id}
+                  className="relative w-20 h-20 rounded-btn overflow-hidden border border-gray-200 dark:border-gray-600"
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: `conic-gradient(#17A548 ${progress * 3.6}deg, #e5e7eb 0deg)` }}
+                  />
+                  <div className="absolute inset-1 rounded-btn bg-white dark:bg-gray-800 flex items-center justify-center">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{progress}%</span>
+                  </div>
+                </div>
+              ))}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-20 h-20 rounded-btn border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-2xl"
+                disabled={pendingUploads.length > 0}
+                className="w-20 h-20 rounded-btn border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-2xl"
               >
-                {uploading ? (
-                  <svg className="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : '+'}
+                +
               </button>
             </div>
             <input
@@ -197,14 +263,14 @@ export default function FieldFormPage() {
           {/* Active toggle */}
           <div className="flex items-center justify-between py-2">
             <div>
-              <p className="font-medium text-gray-900">Faol</p>
-              <p className="text-sm text-gray-500">Maydon band qilinishi mumkin</p>
+              <p className="font-medium text-gray-900 dark:text-gray-100">Faol</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Maydon band qilinishi mumkin</p>
             </div>
             <button
               type="button"
               onClick={() => setIsActive((v) => !v)}
               className={`relative w-12 h-6 rounded-full transition-colors ${
-                isActive ? 'bg-primary' : 'bg-gray-300'
+                isActive ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <span

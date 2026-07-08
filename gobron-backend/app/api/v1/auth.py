@@ -33,7 +33,9 @@ async def login(body: PasswordLogin, db: DBSession):
 @router.post("/phone-login", response_model=TokenPair)
 async def phone_login(body: PhoneLogin, db: DBSession):
     try:
-        return await AuthService(db).login_with_phone(body.phone, body.full_name)
+        return await AuthService(db).login_with_phone(
+            body.phone, body.full_name, body.password
+        )
     except AuthError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
 

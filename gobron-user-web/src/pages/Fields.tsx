@@ -19,6 +19,15 @@ export default function Fields() {
   };
   const { data, isLoading, error } = useFields(filters);
 
+  const uniqueFields = [];
+  const seenOwners = new Set();
+  for (const f of data || []) {
+    if (!seenOwners.has(f.owner_id)) {
+      seenOwners.add(f.owner_id);
+      uniqueFields.push(f);
+    }
+  }
+
   return (
     <div className="px-4 py-4">
       <div className="flex items-center gap-2">
@@ -72,9 +81,9 @@ export default function Fields() {
           <Spinner />
         ) : error ? (
           <ErrorBox message="Maydonlarni yuklab bo'lmadi." />
-        ) : data && data.length > 0 ? (
+        ) : uniqueFields.length > 0 ? (
           <div className="grid gap-4">
-            {data.map((f) => (
+            {uniqueFields.map((f) => (
               <FieldCard key={f.id} field={f} />
             ))}
           </div>

@@ -40,6 +40,8 @@ class OwnerFieldIn(BaseModel):
     price_per_hour: Decimal
     images: list[str] = []
     is_active: bool = True
+    # How many days ahead (including today) the manual-booking picker opens.
+    booking_window_days: int = Field(3, ge=1, le=30)
 
 
 class OwnerFieldOut(OwnerFieldIn):

@@ -6,13 +6,35 @@ export interface LoginResponse {
   expires_in?: number
 }
 
-export async function loginWithPhone(phone: string, fullName?: string): Promise<LoginResponse> {
-  const { data } = await api.post<LoginResponse>('/auth/login', {
+export interface OwnerProfile {
+  fullName: string
+  phone: string | null
+  createdAt: string // ISO
+}
+
+export async function fetchMe(): Promise<OwnerProfile> {
+  const { data } = await api.get('/auth/me')
+  return { fullName: data.full_name, phone: data.phone, createdAt: data.created_at }
+}
+
+async function phoneAuth(phone: string, password: string, fullName?: string): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>('/auth/phone-login', {
     phone,
+    password,
     full_name: fullName,
   })
   tokenStorage.saveTokens(data.access_token, data.refresh_token, data.expires_in ?? 3600)
   return data
+}
+
+/** New field owner: phone + name + password. */
+export function registerWithPhone(phone: string, fullName: string, password: string) {
+  return phoneAuth(phone, password, fullName)
+}
+
+/** Existing field owner: phone + password. */
+export function loginWithPhone(phone: string, password: string) {
+  return phoneAuth(phone, password)
 }
 
 /** Verify stored tokens are still valid; try refresh if access is expired */

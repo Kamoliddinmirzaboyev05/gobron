@@ -18,23 +18,23 @@ export default function FieldCard({ field, onEdit }: { field: Field; onEdit: () 
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900">{field.name}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{field.name}</h3>
             {field.size && (
-              <p className="text-sm text-gray-500 mt-0.5">{field.size}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{field.size}</p>
             )}
           </div>
           <div className="flex flex-col items-end gap-1">
             <span
               className={`chip ${
                 field.surfaceType === 'covered'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-green-100 text-green-700'
+                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                  : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
               }`}
             >
               {field.surfaceType === 'covered' ? 'Yopiq' : 'Ochiq'}
             </span>
             {!field.isActive && (
-              <span className="chip bg-red-100 text-red-600">O'chirilgan</span>
+              <span className="chip bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300">O'chirilgan</span>
             )}
           </div>
         </div>
@@ -43,7 +43,7 @@ export default function FieldCard({ field, onEdit }: { field: Field; onEdit: () 
           <p className="text-primary font-bold">{formatSum(field.pricePerHour)}/soat</p>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit() }}
-            className="text-gray-400 hover:text-primary transition-colors p-1"
+            className="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors p-1"
           >
             <EditIcon />
           </button>

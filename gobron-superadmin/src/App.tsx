@@ -10,6 +10,7 @@ import FieldOwners from "./pages/FieldOwners";
 import Users from "./pages/Users";
 import Bookings from "./pages/Bookings";
 import Broadcasts from "./pages/Broadcasts";
+import Payments from "./pages/Payments";
 import { Spinner } from "./components/ui";
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="users" element={<Users />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="broadcasts" element={<Broadcasts />} />
+        <Route path="payments" element={<Payments />} />
       </Route>
     </Routes>
   );

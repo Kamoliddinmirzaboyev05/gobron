@@ -4,6 +4,7 @@ import { useAuthStore } from './store/auth'
 import { setSessionExpiredHandler } from './api/client'
 import SplashScreen from './pages/SplashScreen'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import HomeShell from './pages/HomeShell'
 import FieldFormPage from './pages/FieldFormPage'
 
@@ -36,6 +37,14 @@ export default function App() {
             status === 'authenticated'
               ? <Navigate to="/home" replace />
               : <LoginPage />
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            status === 'authenticated'
+              ? <Navigate to="/home" replace />
+              : <RegisterPage />
           }
         />
         <Route

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, ShieldCheck } from "lucide-react";
-import { useFieldOwners, useDeleteFieldOwner, useVerifyFieldOwner } from "../hooks/useFieldOwners";
+import { Plus, Pencil, Trash2, ShieldCheck, PowerOff, List } from "lucide-react";
+import { useFieldOwners, useDeleteFieldOwner, useVerifyFieldOwner, useToggleFieldOwnerActive } from "../hooks/useFieldOwners";
+import { Link } from "react-router-dom";
 import FieldOwnerFormModal from "../components/FieldOwnerFormModal";
 import { Badge, Empty, Spinner } from "../components/ui";
 import type { FieldOwner } from "../types";
@@ -9,6 +10,7 @@ export default function FieldOwners() {
   const { data, isLoading } = useFieldOwners();
   const del = useDeleteFieldOwner();
   const verify = useVerifyFieldOwner();
+  const toggleActive = useToggleFieldOwnerActive();
   const [editing, setEditing] = useState<FieldOwner | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -64,6 +66,23 @@ export default function FieldOwners() {
                           <ShieldCheck className="h-4 w-4" />
                         </button>
                       )}
+                      
+                      <button
+                        title="Maydonlarni o'chirish/yoqish"
+                        onClick={() => confirm("Egasi maydonlari holati o'zgartirilsinmi?") && toggleActive.mutate(o.id)}
+                        className="rounded-lg p-2 text-gray-400 hover:bg-orange-50 hover:text-orange-600"
+                      >
+                        <PowerOff className="h-4 w-4" />
+                      </button>
+                      
+                      <Link
+                        to={`/bookings?owner=${o.user_id}`}
+                        title="Bronlarini ko'rish"
+                        className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-blue-600 inline-block"
+                      >
+                        <List className="h-4 w-4" />
+                      </Link>
+
                       <button title="Tahrirlash" onClick={() => openEdit(o)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-50">
                         <Pencil className="h-4 w-4" />
                       </button>

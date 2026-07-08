@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     # Max age (seconds) accepted for a Telegram initData auth_date signature.
     TELEGRAM_INITDATA_MAX_AGE: int = 60 * 60 * 24
 
+    # --- Web Push (admin-pwa notifications, delivered even while the app is closed) ---
+    # Generate a real pair with `python -m py_vapid --gen` (or see push_service docs).
+    VAPID_PUBLIC_KEY: str = "change-me-in-production"
+    VAPID_PRIVATE_KEY: str = "change-me-in-production"
+    VAPID_SUBJECT: str = "mailto:admin@gobron.uz"
+
     # --- OTP ---
     OTP_LENGTH: int = 6
     OTP_EXPIRE_SECONDS: int = 120

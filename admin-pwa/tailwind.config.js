@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -12,9 +13,9 @@ export default {
         scaffold: '#F6F8F6',
       },
       borderRadius: {
-        card: '16px',
-        btn: '12px',
-        input: '12px',
+        card: '12px',
+        btn: '8px',
+        input: '8px',
       },
     },
   },

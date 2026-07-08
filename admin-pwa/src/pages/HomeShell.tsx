@@ -1,32 +1,38 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import StatsPage from './StatsPage'
 import BookingsListPage from './BookingsListPage'
+import FieldsListPage from './FieldsListPage'
 import NotificationsPage from './NotificationsPage'
-import VenueSettingsPage from './VenueSettingsPage'
+import ProfilePage from './ProfilePage'
+import PaymentsPage from './PaymentsPage'
 
 const tabs = [
   { to: 'stats', label: 'Asosiy', icon: DashboardIcon },
   { to: 'bookings', label: 'Bandliklar', icon: CalendarIcon },
-  { to: 'notifications', label: 'Bildirishnomalar', icon: BellIcon },
-  { to: 'settings', label: 'Sozlamalar', icon: SettingsIcon },
+  { to: 'fields', label: 'Maydonlar', icon: SoccerIcon },
+  { to: 'payments', label: "To'lov", icon: WalletIcon },
+  { to: 'profile', label: 'Profil', icon: SettingsIcon },
 ]
 
 export default function HomeShell() {
   return (
-    <div className="flex flex-col min-h-dvh bg-scaffold">
+    <div className="flex flex-col min-h-dvh bg-scaffold dark:bg-gray-900">
       {/* Content area */}
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))]">
         <Routes>
           <Route index element={<Navigate to="stats" replace />} />
           <Route path="stats" element={<StatsPage />} />
           <Route path="bookings" element={<BookingsListPage />} />
+          <Route path="fields" element={<FieldsListPage />} />
+          {/* Not a bottom-nav tab — reached via the bell icon in each tab's TopBar */}
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="settings" element={<VenueSettingsPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Routes>
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex safe-bottom z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex safe-bottom z-50">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -77,18 +83,23 @@ function CalendarIcon({ filled }: { filled: boolean }) {
   )
 }
 
-function BellIcon({ filled }: { filled: boolean }) {
+function SoccerIcon({ filled }: { filled: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M6 10a6 6 0 0112 0v3l2 2H4l2-2v-3z"
+      <circle
+        cx="12" cy="12" r="9"
         stroke="currentColor"
         strokeWidth="1.8"
-        strokeLinejoin="round"
         fill={filled ? 'currentColor' : 'none'}
         fillOpacity={filled ? 0.15 : 0}
       />
-      <path d="M10 17a2 2 0 004 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M12 7l-2.5 2 1 3h3l1-3L12 7zM9.5 9L7 10.5M14.5 9L17 10.5M9.5 12H7.5l-1 3M14.5 12H16.5l1 3M9.5 15l1 2.5M14.5 15l-1 2.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }
@@ -103,6 +114,15 @@ function SettingsIcon({ filled }: { filled: boolean }) {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
+    </svg>
+  )
+}
+
+function WalletIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.15 : 0} />
+      <path d="M16 12h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }

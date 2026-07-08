@@ -9,6 +9,7 @@ from app.models.broadcast import Broadcast
 from app.models.enums import BroadcastAudience, UserRole
 from app.models.user import User
 from app.schemas.broadcast import BroadcastOut
+from app.schemas.subscription import SubscriptionPaymentOut, SubscriptionPaymentCreate
 from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingOut,
@@ -19,6 +20,7 @@ from app.schemas.owner import (
     VenueIn,
     VenueOut,
 )
+from app.schemas.booking import AdminBookingOut
 from app.services.owner_service import OwnerService
 
 router = APIRouter(prefix="/owner", tags=["owner"])
@@ -113,6 +115,32 @@ async def complete_booking(
     return await OwnerService(db).complete_booking(user, booking_id)
 
 
+@router.get("/requests", response_model=list[AdminBookingOut])
+async def list_booking_requests(
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).list_booking_requests(user)
+
+
+@router.post("/requests/{booking_id}/accept", response_model=AdminBookingOut)
+async def accept_booking_request(
+    booking_id: int,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).accept_booking_request(user, booking_id)
+
+
+@router.post("/requests/{booking_id}/reject", response_model=AdminBookingOut)
+async def reject_booking_request(
+    booking_id: int,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).reject_booking_request(user, booking_id)
+
+
 @router.get("/stats/summary", response_model=OwnerStatsSummary)
 async def stats_summary(db: DBSession, user: User = Depends(_owner)):
     return await OwnerService(db).stats_summary(user)
@@ -131,3 +159,16 @@ async def list_notifications(db: DBSession, user: User = Depends(_owner)):
         .limit(100)
     )
     return list((await db.execute(stmt)).scalars().all())
+
+@router.get("/subscription-payments", response_model=list[SubscriptionPaymentOut])
+async def list_subscription_payments(db: DBSession, user: User = Depends(_owner)):
+    return await OwnerService(db).list_subscription_payments(user)
+
+
+@router.post("/subscription-payments", response_model=SubscriptionPaymentOut, status_code=status.HTTP_201_CREATED)
+async def create_subscription_payment(
+    body: SubscriptionPaymentCreate,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    return await OwnerService(db).create_subscription_payment(user, body.amount, body.receipt_image)

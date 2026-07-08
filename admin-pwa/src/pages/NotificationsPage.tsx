@@ -1,39 +1,113 @@
-import { } from 'react'
+import { useState, useEffect } from 'react'
 import { fetchNotifications } from '../api/notifications'
-import type { Notification } from '../types'
-import { useLoad } from '../hooks/useLoad'
+import { fetchRequests, acceptRequest, rejectRequest } from '../api/bookings'
+import type { Notification, AdminBookingRequest } from '../types'
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
 import { NotificationsListSkeleton } from '../components/Skeleton'
 
 export default function NotificationsPage() {
-  const { data: notifications, loading } = useLoad<Notification[]>(
-    () => fetchNotifications(),
-    []
-  )
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [requests, setRequests] = useState<AdminBookingRequest[]>([])
+  const [loading, setLoading] = useState(true)
+
+  async function loadData() {
+    try {
+      const [nots, reqs] = await Promise.all([
+        fetchNotifications(),
+        fetchRequests()
+      ])
+      setNotifications(nots)
+      setRequests(reqs)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  async function handleAccept(id: string) {
+    await acceptRequest(id)
+    loadData()
+  }
+
+  async function handleReject(id: string) {
+    await rejectRequest(id)
+    loadData()
+  }
+
+  const isEmpty = notifications.length === 0 && requests.length === 0
 
   return (
     <div className="flex flex-col min-h-full">
-      {/* AppBar */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">Bildirishnomalar</h1>
+      <div className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-100 dark:border-gray-700">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Bildirishnomalar</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading && !notifications ? (
+        {loading ? (
           <NotificationsListSkeleton />
-        ) : !notifications || notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-60 text-gray-400 gap-2">
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center h-60 text-gray-400 dark:text-gray-500 gap-2">
             <BellOffIcon />
             <p>Hozircha bildirishnoma yo'q</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {requests.map((r) => (
+              <RequestItem 
+                key={`req-${r.id}`} 
+                request={r} 
+                onAccept={() => handleAccept(r.id)} 
+                onReject={() => handleReject(r.id)} 
+              />
+            ))}
             {notifications.map((n) => (
-              <NotificationItem key={n.id} notification={n} />
+              <NotificationItem key={`not-${n.id}`} notification={n} />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function RequestItem({ request: r, onAccept, onReject }: { request: AdminBookingRequest, onAccept: () => void, onReject: () => void }) {
+  const dateStr = (() => {
+    try {
+      return format(new Date(r.createdAt), 'd MMM, HH:mm', { locale: uz })
+    } catch {
+      return r.createdAt
+    }
+  })()
+
+  const slotDate = r.slot ? format(new Date(r.slot.slot_date), 'd MMM', { locale: uz }) : ''
+
+  return (
+    <div className="bg-white dark:bg-gray-800 px-4 py-3">
+      <div className="flex justify-between items-start mb-2">
+        <p className="font-semibold text-gray-900 dark:text-gray-100">Yangi band qilish so'rovi</p>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{dateStr}</span>
+      </div>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+        <span className="font-medium">{r.user?.firstName || 'Mijoz'}</span> so'rov yubordi.
+      </p>
+      <div className="bg-gray-50 dark:bg-gray-700/50 p-2 rounded-lg text-sm text-gray-800 dark:text-gray-200 mb-3">
+        {slotDate} kuni {r.slot?.start_time.slice(0, 5)} - {r.slot?.end_time.slice(0, 5)}
+        <br />
+        Tel: {r.user?.phone}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onAccept} className="flex-1 bg-primary text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+          Qabul qilish
+        </button>
+        <button onClick={onReject} className="flex-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 py-2 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors">
+          Rad etish
+        </button>
       </div>
     </div>
   )
@@ -49,7 +123,7 @@ function NotificationItem({ notification: n }: { notification: Notification }) {
   })()
 
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-gray-800">
       {n.imageUrl && (
         <img
           src={n.imageUrl}
@@ -59,10 +133,10 @@ function NotificationItem({ notification: n }: { notification: Notification }) {
       )}
       <div className="px-4 py-3">
         {n.title && (
-          <p className="font-semibold text-gray-900 mb-0.5">{n.title}</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100 mb-0.5">{n.title}</p>
         )}
-        <p className="text-sm text-gray-700">{n.body}</p>
-        <p className="text-xs text-gray-400 mt-1">{dateStr}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300">{n.body}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{dateStr}</p>
       </div>
     </div>
   )

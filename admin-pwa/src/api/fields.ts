@@ -10,6 +10,7 @@ interface OwnerFieldApi {
   price_per_hour: number
   images: string[]
   is_active: boolean
+  booking_window_days: number
 }
 
 function fromApi(f: OwnerFieldApi): Field {
@@ -23,6 +24,7 @@ function fromApi(f: OwnerFieldApi): Field {
     images: f.images,
     isActive: f.is_active,
     peakPriceMultiplier: 1.0,
+    bookingWindowDays: f.booking_window_days,
   }
 }
 
@@ -34,6 +36,7 @@ function toApi(field: Omit<Field, 'id' | 'venueId'>) {
     price_per_hour: field.pricePerHour,
     images: field.images,
     is_active: field.isActive,
+    booking_window_days: field.bookingWindowDays,
   }
 }
 
