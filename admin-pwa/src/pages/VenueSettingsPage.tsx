@@ -1,12 +1,22 @@
 import { useState, useEffect, FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchVenue, updateVenue } from '../api/venue'
-import type { Venue } from '../types'
+import { fetchFields } from '../api/fields'
+import { fetchMe, OwnerProfile } from '../api/auth'
+import type { Venue, Field } from '../types'
 import { WEEKDAY_LABELS } from '../types'
 import { useLoad } from '../hooks/useLoad'
 import { VenueSettingsSkeleton } from '../components/Skeleton'
+import { getSubscriptionStatus } from '../utils/subscription'
+import FieldCard from '../components/FieldCard'
 
 export default function VenueSettingsPage() {
+  const navigate = useNavigate()
   const { data: venue, loading } = useLoad<Venue>(() => fetchVenue(), [])
+  const { data: profile } = useLoad<OwnerProfile>(() => fetchMe(), [])
+  const { data: fields } = useLoad<Field[]>(() => fetchFields(), [])
+  const monthlyPrice = fields?.[0]?.pricePerHour ?? 0
+  const subscription = profile ? getSubscriptionStatus(profile.createdAt) : null
 
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
@@ -77,6 +87,33 @@ export default function VenueSettingsPage() {
       {/* AppBar */}
       <div className="bg-white px-4 py-4 border-b border-gray-100">
         <h1 className="text-xl font-bold text-gray-900">Sozlamalar</h1>
+      </div>
+
+      <div className="p-4 pb-0 flex flex-col gap-4">
+        {/* Owner name */}
+        {profile && (
+          <div className="card px-4 py-3">
+            <p className="text-sm text-gray-500">Egasi</p>
+            <p className="font-medium text-gray-900">{profile.fullName || '—'}</p>
+          </div>
+        )}
+
+        {/* Subscription */}
+        {subscription && (
+          <div className="card px-4 py-3">
+            <p className="font-medium text-gray-900">
+              {subscription.isTrial ? "Bepul sinov davri" : 'Oylik obuna'}
+            </p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {subscription.daysLeft} kun qoldi
+            </p>
+            {!subscription.isTrial && (
+              <p className="text-sm text-gray-500 mt-0.5">
+                Keyingi to'lov: {monthlyPrice.toLocaleString('uz-UZ')} so'm
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
@@ -155,6 +192,35 @@ export default function VenueSettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Fields */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">Maydonlar</label>
+              <button
+                type="button"
+                onClick={() => navigate('/fields/new')}
+                className="text-primary text-sm font-medium"
+              >
+                + Qo'shish
+              </button>
+            </div>
+            {fields && fields.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {fields.map((field) => (
+                  <FieldCard
+                    key={field.id}
+                    field={field}
+                    onEdit={() => navigate(`/fields/edit/${field.id}`, { state: { field } })}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="card p-6 text-center text-gray-400 text-sm">
+                Hozircha maydon yo'q
+              </div>
+            )}
           </div>
 
           {/* Active toggle */}

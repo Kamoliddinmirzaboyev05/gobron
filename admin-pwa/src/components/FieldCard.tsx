@@ -1,66 +1,12 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { fetchFields } from '../api/fields'
 import type { Field } from '../types'
-import { useLoad } from '../hooks/useLoad'
-import { FieldsListSkeleton } from '../components/Skeleton'
 
 function formatSum(amount: number): string {
   return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm"
 }
 
-export default function FieldsListPage() {
-  const navigate = useNavigate()
-  const [refreshKey] = useState(0)
-
-  const { data: fields, loading } = useLoad<Field[]>(() => fetchFields(), [refreshKey])
-
-  return (
-    <div className="flex flex-col min-h-full">
-      {/* AppBar */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">Maydonlar</h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {loading && !fields ? (
-          <FieldsListSkeleton />
-        ) : fields && fields.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {fields.map((field) => (
-              <FieldCard
-                key={field.id}
-                field={field}
-                onEdit={() => navigate(`/fields/edit/${field.id}`, { state: { field } })}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="card p-8 text-center text-gray-400">
-            <p>Hozircha maydon yo'q</p>
-            <p className="text-sm mt-1">Qo'shish uchun + tugmasini bosing</p>
-          </div>
-        )}
-      </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => navigate('/fields/new')}
-        className="fixed bottom-20 right-4 bg-primary text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-40 active:scale-95 transition-transform"
-        aria-label="Yangi maydon"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-      </button>
-    </div>
-  )
-}
-
-function FieldCard({ field, onEdit }: { field: Field; onEdit: () => void }) {
+export default function FieldCard({ field, onEdit }: { field: Field; onEdit: () => void }) {
   return (
     <div className="card overflow-hidden" onClick={onEdit}>
-      {/* Image */}
       {field.images.length > 0 && (
         <img
           src={field.images[0]}

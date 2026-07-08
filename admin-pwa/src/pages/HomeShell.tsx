@@ -1,12 +1,12 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import StatsPage from './StatsPage'
-import FieldsListPage from './FieldsListPage'
+import BookingsListPage from './BookingsListPage'
 import NotificationsPage from './NotificationsPage'
 import VenueSettingsPage from './VenueSettingsPage'
 
 const tabs = [
   { to: 'stats', label: 'Asosiy', icon: DashboardIcon },
-  { to: 'fields', label: 'Maydonlar', icon: SoccerIcon },
+  { to: 'bookings', label: 'Bandliklar', icon: CalendarIcon },
   { to: 'notifications', label: 'Bildirishnomalar', icon: BellIcon },
   { to: 'settings', label: 'Sozlamalar', icon: SettingsIcon },
 ]
@@ -19,7 +19,7 @@ export default function HomeShell() {
         <Routes>
           <Route index element={<Navigate to="stats" replace />} />
           <Route path="stats" element={<StatsPage />} />
-          <Route path="fields" element={<FieldsListPage />} />
+          <Route path="bookings" element={<BookingsListPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="settings" element={<VenueSettingsPage />} />
         </Routes>
@@ -63,23 +63,16 @@ function DashboardIcon({ filled }: { filled: boolean }) {
   )
 }
 
-function SoccerIcon({ filled }: { filled: boolean }) {
+function CalendarIcon({ filled }: { filled: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <circle
-        cx="12" cy="12" r="9"
-        stroke="currentColor"
-        strokeWidth="1.8"
+      <rect
+        x="3" y="5" width="18" height="16" rx="2"
+        stroke="currentColor" strokeWidth="1.8"
         fill={filled ? 'currentColor' : 'none'}
         fillOpacity={filled ? 0.15 : 0}
       />
-      <path
-        d="M12 7l-2.5 2 1 3h3l1-3L12 7zM9.5 9L7 10.5M14.5 9L17 10.5M9.5 12H7.5l-1 3M14.5 12H16.5l1 3M9.5 15l1 2.5M14.5 15l-1 2.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }

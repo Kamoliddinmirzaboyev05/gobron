@@ -1,10 +1,8 @@
-import { useState, useCallback } from 'react'
-import { fetchStats, fetchTodayBookings } from '../api/stats'
-import { createManualBooking } from '../api/bookings'
-import { fetchFields } from '../api/fields'
-import type { DashboardStats, Booking, Field, ManualBookingInput } from '../types'
+import { useState } from 'react'
+import { fetchStats } from '../api/stats'
+import { fetchBookingsByDate } from '../api/bookings'
+import type { DashboardStats, Booking } from '../types'
 import { useLoad } from '../hooks/useLoad'
-import ManualBookingModal from '../components/ManualBookingModal'
 import BookingTile from '../components/BookingTile'
 import { StatsPageSkeleton } from '../components/Skeleton'
 
@@ -13,28 +11,18 @@ function formatSum(amount: number): string {
 }
 
 export default function StatsPage() {
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [showBookingModal, setShowBookingModal] = useState(false)
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), [])
+  const [refreshKey] = useState(0)
 
   const { data: stats, loading: statsLoading } = useLoad<DashboardStats>(
     () => fetchStats(),
     [refreshKey]
   )
   const { data: todayBookings, loading: bookingsLoading } = useLoad<Booking[]>(
-    () => fetchTodayBookings(),
+    () => fetchBookingsByDate(new Date().toISOString().split('T')[0]),
     [refreshKey]
   )
-  const { data: fields } = useLoad<Field[]>(() => fetchFields(), [])
 
   const loading = statsLoading || bookingsLoading
-
-  async function handleCreateBooking(input: ManualBookingInput) {
-    await createManualBooking(input)
-    setShowBookingModal(false)
-    refresh()
-  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -91,25 +79,6 @@ export default function StatsPage() {
           </div>
         )}
       </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => setShowBookingModal(true)}
-        className="fixed bottom-20 right-4 bg-primary text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-40 active:scale-95 transition-transform"
-        aria-label="Band qilish"
-      >
-        <PlusIcon />
-        <span className="sr-only">Band qilish</span>
-      </button>
-
-      {/* Manual Booking Modal */}
-      {showBookingModal && (
-        <ManualBookingModal
-          fields={fields ?? []}
-          onConfirm={handleCreateBooking}
-          onClose={() => setShowBookingModal(false)}
-        />
-      )}
     </div>
   )
 }
@@ -124,11 +93,4 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
   )
 }
 
-function PlusIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  )
-}
 
