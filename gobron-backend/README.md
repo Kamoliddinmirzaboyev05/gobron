@@ -68,6 +68,9 @@ uvicorn app.main:app --reload
 #   health: http://localhost:8000/health
 
 # Telegram onboarding bot (separate process, same venv)
+# Also ticks the "1 hour to kickoff" reminder loop, so it must be running in
+# production or players never get reminded. Run exactly one instance: the loop
+# has no cross-process lock.
 python -m bot.main
 ```
 

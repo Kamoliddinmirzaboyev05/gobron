@@ -47,23 +47,28 @@ def _service(db) -> ReviewService:
 
 @pytest.mark.asyncio
 async def test_cannot_rate_someone_elses_booking():
-    booking = Booking(id=1, user_id=99, slot_id=5, status=BookingStatus.CONFIRMED)
+    booking = Booking(id=1, user_id=99, slot_id=5, status=BookingStatus.COMPLETED)
     db = FakeDB({(Booking, 1): booking}, scalars=[])
     with pytest.raises(ReviewError):
         await _service(db).rate_booking(user_id=1, booking_id=1, rating=5)
 
 
 @pytest.mark.asyncio
-async def test_cannot_rate_a_pending_booking():
-    booking = Booking(id=1, user_id=1, slot_id=5, status=BookingStatus.PENDING)
+@pytest.mark.parametrize(
+    "status",
+    [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CANCELLED],
+)
+async def test_only_a_completed_booking_can_be_rated(status):
+    """Confirmed isn't enough - the slot has to be over. Cancelled never."""
+    booking = Booking(id=1, user_id=1, slot_id=5, status=status)
     db = FakeDB({(Booking, 1): booking}, scalars=[])
     with pytest.raises(ReviewError):
         await _service(db).rate_booking(user_id=1, booking_id=1, rating=5)
 
 
 @pytest.mark.asyncio
-async def test_rating_a_confirmed_booking_updates_the_field_average():
-    booking = Booking(id=1, user_id=1, slot_id=5, status=BookingStatus.CONFIRMED)
+async def test_rating_a_completed_booking_updates_the_field_average():
+    booking = Booking(id=1, user_id=1, slot_id=5, status=BookingStatus.COMPLETED)
     field = Field(id=7, rating=0.0)
     db = FakeDB(
         {(Booking, 1): booking, (Field, 7): field},
@@ -82,7 +87,7 @@ async def test_rating_a_confirmed_booking_updates_the_field_average():
 async def test_re_rating_overwrites_instead_of_inserting():
     from app.models.review import Review
 
-    booking = Booking(id=1, user_id=1, slot_id=5, status=BookingStatus.CONFIRMED)
+    booking = Booking(id=1, user_id=1, slot_id=5, status=BookingStatus.COMPLETED)
     field = Field(id=7, rating=5.0)
     existing = Review(id=3, booking_id=1, user_id=1, field_id=7, rating=5)
     db = FakeDB({(Booking, 1): booking, (Field, 7): field}, scalars=[7, existing, 2.0])

@@ -5,7 +5,8 @@ completion the user row is upserted with is_onboarded=True and a button opens
 the Telegram Mini App (TMA).
 
 The bot shares the backend's database and models — it imports app.* directly, so
-there is a single source of truth for the User table.
+there is a single source of truth for the User table. It also hosts the kickoff
+reminder loop (bot/reminders.py), which needs a single-instance process.
 
 Run from the gobron-backend directory:  python -m bot.main
 """
@@ -32,6 +33,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from bot.regions import REGIONS
+from bot.reminders import reminder_loop
 
 logging.basicConfig(level=logging.INFO)
 
@@ -147,7 +149,12 @@ async def phone_retry(message: Message):
 
 async def main() -> None:
     bot = Bot(settings.TELEGRAM_BOT_TOKEN)
-    await dp.start_polling(bot)
+    # Held in a local so the task is not garbage-collected mid-flight.
+    reminders = asyncio.create_task(reminder_loop())
+    try:
+        await dp.start_polling(bot)
+    finally:
+        reminders.cancel()
 
 
 if __name__ == "__main__":

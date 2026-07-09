@@ -18,7 +18,9 @@ class ReviewError(Exception):
     """The booking can't be rated (not the user's, or not played yet)."""
 
 
-_RATEABLE = (BookingStatus.CONFIRMED, BookingStatus.COMPLETED)
+# You rate a pitch you played on, so the slot has to be over. Cancelled or
+# rejected bookings never earn the right to rate.
+_RATEABLE = (BookingStatus.COMPLETED,)
 
 
 class ReviewService:
@@ -30,7 +32,7 @@ class ReviewService:
         if booking is None or booking.user_id != user_id:
             raise ReviewError("Booking not found")
         if booking.status not in _RATEABLE:
-            raise ReviewError("Faqat tasdiqlangan bronni baholash mumkin")
+            raise ReviewError("Faqat tugallangan bronni baholash mumkin")
 
         field_id = (
             await self.db.execute(select(Slot.field_id).where(Slot.id == booking.slot_id))

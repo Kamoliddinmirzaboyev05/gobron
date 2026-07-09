@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { useMyBookings, useCancelBooking, useRateBooking } from "../hooks/useBookings";
 import { BookingListSkeleton } from "../components/Skeleton";
@@ -18,6 +19,15 @@ const STATUS_LABEL: Record<Booking["status"], string> = {
   cancelled: "Bekor qilingan",
   completed: "Yakunlangan",
 };
+
+const TABS = [
+  { key: "confirmed", label: "Faol" },
+  { key: "pending", label: "Kutilayotgan" },
+  { key: "completed", label: "Tugallangan" },
+  { key: "cancelled", label: "Bekor qilingan" },
+] as const;
+
+type Tab = (typeof TABS)[number]["key"];
 
 function RatingStars({ booking }: { booking: Booking }) {
   const rate = useRateBooking();
@@ -52,6 +62,7 @@ function RatingStars({ booking }: { booking: Booking }) {
 export default function MyBookings() {
   const { data, isLoading } = useMyBookings();
   const cancel = useCancelBooking();
+  const [tab, setTab] = useState<Tab>("confirmed");
 
   if (isLoading)
     return (
@@ -62,11 +73,37 @@ export default function MyBookings() {
     );
   if (!data || data.length === 0) return <Empty>Sizda hali bron yo'q</Empty>;
 
+  const counts = data.reduce<Record<string, number>>((acc, b) => {
+    acc[b.status] = (acc[b.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const visible = data.filter((b) => b.status === tab);
+
   return (
     <div className="px-4 py-4">
       <h1 className="mb-4 text-lg font-semibold">Mening bronlarim</h1>
+
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold ${
+              tab === t.key
+                ? "bg-pitch-600 text-white"
+                : "bg-white text-gray-600 ring-1 ring-gray-200"
+            }`}
+          >
+            {t.label}
+            {counts[t.key] ? ` (${counts[t.key]})` : ""}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 && <Empty>Bu bo'limda bron yo'q</Empty>}
+
       <div className="grid gap-3">
-        {data.map((b) => (
+        {visible.map((b) => (
           <div key={b.id} className="rounded-xl bg-white p-4 ring-1 ring-gray-100">
             <div className="flex items-start justify-between">
               <div>
@@ -93,7 +130,7 @@ export default function MyBookings() {
                 Bekor qilish
               </button>
             )}
-            {(b.status === "confirmed" || b.status === "completed") && (
+            {b.status === "completed" && (
               <RatingStars booking={b} />
             )}
           </div>

@@ -1,8 +1,8 @@
 """Broadcast service — deliver an admin post to every bot user.
 
-Sends directly through the Telegram Bot HTTP API (no aiogram dependency needed
-here): sendPhoto when an image is attached, otherwise sendMessage. Runs
-sequentially with a tiny delay to stay under Telegram's ~30 msg/s limit.
+sendPhoto when an image is attached, otherwise sendMessage; both go out through
+app.services.telegram. Runs sequentially with a tiny delay to stay under
+Telegram's ~30 msg/s limit.
 # ponytail: sequential sender, fine to low-thousands of users; move to a queue
 # (Celery/arq) + batched workers if the audience grows large.
 """
@@ -12,13 +12,11 @@ from datetime import datetime, timezone
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.models.broadcast import Broadcast
 from app.models.enums import BroadcastAudience, BroadcastStatus
 from app.repositories.user_repository import UserRepository
+from app.services import telegram
 from app.services.push_service import PushService
-
-_API = "https://api.telegram.org/bot{token}/{method}"
 
 
 class BroadcastService:
@@ -46,15 +44,7 @@ class BroadcastService:
             }
         else:
             method, payload = "sendMessage", {"chat_id": chat_id, "text": bc.text}
-        try:
-            resp = await client.post(
-                _API.format(token=settings.TELEGRAM_BOT_TOKEN, method=method),
-                json=payload,
-                timeout=15,
-            )
-            return resp.status_code == 200 and resp.json().get("ok", False)
-        except httpx.HTTPError:
-            return False
+        return await telegram.call(method, payload, client)
 
     async def send(self, broadcast_id: int) -> Broadcast:
         """Deliver a draft broadcast to all eligible users; record counts."""

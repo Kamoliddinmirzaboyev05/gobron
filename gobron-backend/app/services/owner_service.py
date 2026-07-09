@@ -15,6 +15,7 @@ from app.models.slot import Slot
 from app.models.user import User
 from app.models.venue import Venue
 from app.models.subscription_payment import SubscriptionPayment
+from app.services.booking_notifications import send_confirmation
 from app.services.slot_service import SlotService
 from app.schemas.owner import (
     ManualBookingCreate,
@@ -262,7 +263,11 @@ class OwnerService:
             select(Booking)
             .join(Slot, Booking.slot_id == Slot.id)
             .join(Field, Slot.field_id == Field.id)
-            .options(joinedload(Booking.user), joinedload(Booking.slot))
+            # slot.field is loaded for the confirmation message's field name.
+            .options(
+                joinedload(Booking.user),
+                joinedload(Booking.slot).joinedload(Slot.field),
+            )
             .where(Field.owner_id == owner.id, Booking.id == booking_id)
         )
         booking = (await self.db.execute(stmt)).scalar_one_or_none()
@@ -277,7 +282,11 @@ class OwnerService:
         # AdminBookingOut serializes .slot/.user; refresh() expires them, so
         # re-load eagerly rather than letting pydantic trigger a lazy load
         # outside async context (MissingGreenlet -> 500 after a successful write).
-        return await self._get_owned_booking_request(owner, booking_id)
+        booking = await self._get_owned_booking_request(owner, booking_id)
+        # After the commit, never before: the booking is confirmed whether or not
+        # Telegram answers, so send_confirmation swallows its own failures.
+        await send_confirmation(booking)
+        return booking
 
     async def reject_booking_request(self, owner: User, booking_id: int) -> Booking:
         booking = await self._get_owned_booking_request(owner, booking_id)

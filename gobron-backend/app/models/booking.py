@@ -50,6 +50,10 @@ class Booking(Base):
     )
     recurrence_group_id: Mapped[str | None] = mapped_column(String(36), index=True)
 
+    # Stamped once the "1 hour to kickoff" message is delivered, so a restarted
+    # reminder loop never sends it twice.
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
