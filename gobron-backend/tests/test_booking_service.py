@@ -1,22 +1,75 @@
 """Self-checks for BookingService._contiguous_slots (no DB needed)."""
 from datetime import date, time
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
+from app.models.enums import SlotStatus
 from app.models.slot import Slot
+from app.repositories.slot_repository import SlotRepository
 from app.schemas.booking import BookingCreate
 from app.services.booking_service import BookingService, SlotUnavailableError
 
 
-def _slot(start: str, end: str, field_id: int = 1, day: date = date(2026, 7, 9)) -> Slot:
+def _slot(
+    start: str, end: str, *, id: int = 1, field_id: int = 1, day: date = date(2026, 7, 9)
+) -> Slot:
     h1, m1 = map(int, start.split(":"))
     h2, m2 = map(int, end.split(":"))
-    return Slot(field_id=field_id, slot_date=day, start_time=time(h1, m1), end_time=time(h2, m2))
+    return Slot(
+        id=id,
+        field_id=field_id,
+        slot_date=day,
+        start_time=time(h1, m1),
+        end_time=time(h2, m2),
+        status=SlotStatus.AVAILABLE,
+        price=Decimal("100000"),
+    )
 
 
 def _service() -> BookingService:
     return BookingService.__new__(BookingService)
+
+
+class FakeBookingDB:
+    """Just enough of an AsyncSession for create_booking's ONCE/multi-slot path."""
+
+    def add(self, _obj):
+        pass
+
+    async def commit(self):
+        pass
+
+    async def refresh(self, _obj):
+        pass
+
+
+@pytest.mark.asyncio
+async def test_create_booking_populates_slot_without_further_db_access():
+    """Regression test: BookingOut reads booking.slot during response
+    serialization. If that's an unloaded lazy relationship, FastAPI crashes
+    with MissingGreenlet - even though the booking already committed fine.
+    create_booking must attach .slot in memory so no further I/O is needed.
+    """
+    a, b = _slot("11:00", "12:00", id=101), _slot("12:00", "13:00", id=102)
+
+    service = BookingService.__new__(BookingService)
+    service.db = FakeBookingDB()
+    service.slots = SlotRepository.__new__(SlotRepository)
+    service.slots.db = service.db
+
+    async def get_many(slot_ids):
+        return [s for s in [a, b] if s.id in slot_ids]
+
+    service.slots.get_many = get_many
+
+    bookings = await service.create_booking(user_id=1, slot_ids=[101, 102])
+
+    assert len(bookings) == 2
+    assert bookings[0].slot is a
+    assert bookings[1].slot is b
+    assert bookings[0].recurrence_group_id == bookings[1].recurrence_group_id
 
 
 def test_single_slot_is_trivially_contiguous():

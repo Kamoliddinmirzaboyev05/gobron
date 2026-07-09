@@ -107,6 +107,7 @@ class BookingService:
         group_id = str(uuid.uuid4()) if len(targets) > 1 else None
 
         bookings: list[Booking] = []
+        booked_slots: list[Slot] = []
         for slot in targets:
             if slot.status != SlotStatus.AVAILABLE:
                 continue  # skip occurrences already taken; book the rest (recurrence only)
@@ -121,6 +122,7 @@ class BookingService:
             )
             self.db.add(booking)
             bookings.append(booking)
+            booked_slots.append(slot)
 
         if not bookings:
             raise SlotUnavailableError("Slot is not available")
@@ -135,6 +137,12 @@ class BookingService:
 
         for b in bookings:
             await self.db.refresh(b)
+        # BookingOut serializes booking.slot; attach it from what we already
+        # have in memory instead of letting pydantic trigger a lazy load,
+        # which crashes outside greenlet context (MissingGreenlet) and turns
+        # an already-committed, successful booking into a 500 for the caller.
+        for booking, slot in zip(bookings, booked_slots):
+            booking.slot = slot
         return bookings
 
     async def cancel_booking(self, *, booking_id: int, user_id: int) -> Booking:
@@ -151,4 +159,5 @@ class BookingService:
             slot.status = SlotStatus.AVAILABLE
         await self.db.commit()
         await self.db.refresh(booking)
+        booking.slot = slot  # avoid the same lazy-load crash as create_booking
         return booking
