@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { slotSchema, type Slot } from "../types";
 
@@ -17,5 +17,9 @@ export function useSlots(fieldId: number, date: string) {
     },
     refetchInterval: 15_000,
     enabled: !!fieldId && !!date,
+    // Switching field/date keeps the old grid on screen until the new one
+    // lands, instead of collapsing to a skeleton and snapping the sheet's
+    // height around. isLoading then only fires on the very first fetch.
+    placeholderData: keepPreviousData,
   });
 }

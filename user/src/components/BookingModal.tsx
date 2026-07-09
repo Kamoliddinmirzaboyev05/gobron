@@ -58,7 +58,9 @@ export default function BookingModal({
   const [recurrence, setRecurrence] = useState<RecurrenceType>("once");
   const [occurrences, setOccurrences] = useState(4);
 
-  const { data: slots, isLoading } = useSlots(fieldId, date);
+  // isPlaceholderData: the grid on screen still belongs to the previous
+  // field/date. Keep it visible (no height jump) but don't let it be tapped.
+  const { data: slots, isLoading, isPlaceholderData } = useSlots(fieldId, date);
   const createBooking = useCreateBooking();
 
   const selected = useMemo(
@@ -105,8 +107,13 @@ export default function BookingModal({
     setSelectedIds([]);
   }
 
+  // A multi-hour block can't also repeat - the backend rejects it - so the
+  // picked recurrence only counts while exactly one slot is selected.
+  const canRepeat = selected.length === 1;
+  const effectiveRecurrence = canRepeat ? recurrence : "once";
+
   const total =
-    recurrence !== "once" && selected.length === 1
+    effectiveRecurrence !== "once"
       ? selected[0].price * occurrences
       : selected.reduce((sum, s) => sum + s.price, 0);
 
@@ -114,8 +121,8 @@ export default function BookingModal({
     if (selected.length === 0) return;
     await createBooking.mutateAsync({
       slot_ids: selected.map((s) => s.id),
-      recurrence_type: recurrence,
-      occurrences: recurrence === "once" ? 1 : occurrences,
+      recurrence_type: effectiveRecurrence,
+      occurrences: effectiveRecurrence === "once" ? 1 : occurrences,
     });
     onClose();
     navigate("/bookings");
@@ -140,18 +147,20 @@ export default function BookingModal({
         // unmount the sheet the moment it finishes opening. The target check
         // ignores animations bubbling up from children.
         onAnimationEnd={closing ? (e) => e.target === e.currentTarget && onClose() : undefined}
-        className={`max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white ${
+        // A fixed height (not max-h) is what stops the sheet resizing every
+        // time the slot count changes; the body scrolls instead.
+        className={`flex h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white ${
           closing ? "animate-sheet-out" : "animate-sheet-in"
         }`}
       >
-        <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="text-lg font-bold">Band qilish</h2>
           <button onClick={dismiss} className="text-gray-400">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {fields.length > 1 && (
             <>
               <h3 className="mb-2 text-sm font-semibold text-gray-700">Maydon</h3>
@@ -160,7 +169,7 @@ export default function BookingModal({
                   <button
                     key={f.id}
                     onClick={() => switchField(f.id)}
-                    className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${
+                    className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                       f.id === fieldId ? "bg-pitch-600 text-white" : "bg-gray-100 text-gray-600"
                     }`}
                   >
@@ -177,7 +186,7 @@ export default function BookingModal({
               <button
                 key={d.iso}
                 onClick={() => switchDate(d.iso)}
-                className={`flex min-w-16 shrink-0 flex-col items-center rounded-lg px-3 py-2 text-sm ${
+                className={`flex min-w-16 shrink-0 flex-col items-center rounded-lg px-3 py-2 text-sm transition-colors ${
                   d.iso === date ? "bg-pitch-600 text-white" : "bg-white text-gray-600 ring-1 ring-gray-200"
                 }`}
               >
@@ -190,12 +199,16 @@ export default function BookingModal({
           {isLoading ? (
             <SlotGridSkeleton />
           ) : slots && slots.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div
+              className={`grid grid-cols-2 gap-2 transition-opacity ${
+                isPlaceholderData ? "pointer-events-none opacity-50" : "opacity-100"
+              }`}
+            >
               {slots.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => toggleSlot(s)}
-                  className={`rounded-lg py-3 text-sm font-medium ring-1 ${
+                  className={`rounded-lg py-3 text-sm font-medium ring-1 transition-colors active:scale-[0.98] ${
                     selectedIds.includes(s.id)
                       ? "bg-pitch-600 text-white ring-pitch-600"
                       : "bg-white text-gray-700 ring-gray-200"
@@ -209,42 +222,47 @@ export default function BookingModal({
             <Empty>Bu kunda bo'sh vaqt yo'q</Empty>
           )}
 
-          {selected.length === 1 && (
-            <>
-              <h3 className="mb-2 mt-5 text-sm font-semibold text-gray-700">Takrorlanish</h3>
-              <div className="flex gap-2">
-                {RECURRENCE.map((r) => (
-                  <button
-                    key={r.value}
-                    onClick={() => setRecurrence(r.value)}
-                    className={`flex-1 rounded-lg py-2 text-sm font-medium ring-1 ${
-                      recurrence === r.value
-                        ? "bg-pitch-600 text-white ring-pitch-600"
-                        : "bg-white text-gray-600 ring-gray-200"
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-              {recurrence !== "once" && (
-                <label className="mt-3 flex items-center justify-between text-sm text-gray-600">
-                  Necha marta?
-                  <input
-                    type="number"
-                    min={2}
-                    max={12}
-                    value={occurrences}
-                    onChange={(e) => setOccurrences(Math.max(2, Number(e.target.value)))}
-                    className="w-20 rounded-md border border-gray-200 px-2 py-1.5 text-right"
-                  />
-                </label>
-              )}
-            </>
-          )}
+          {/* Always mounted: popping in on the 1st slot and out on the 2nd
+              made the sheet jump under the user's finger. Repeating only
+              makes sense for a single slot, so it just disables instead. */}
+          <div className={canRepeat ? "" : "pointer-events-none opacity-40"}>
+            <h3 className="mb-2 mt-5 text-sm font-semibold text-gray-700">Takrorlanish</h3>
+            <div className="flex gap-2">
+              {RECURRENCE.map((r) => (
+                <button
+                  key={r.value}
+                  disabled={!canRepeat}
+                  onClick={() => setRecurrence(r.value)}
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium ring-1 transition-colors ${
+                    recurrence === r.value
+                      ? "bg-pitch-600 text-white ring-pitch-600"
+                      : "bg-white text-gray-600 ring-gray-200"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            {/* Reserve the row so ticking "Har kuni" doesn't shift the sheet. */}
+            <label
+              className={`mt-3 flex items-center justify-between text-sm text-gray-600 transition-opacity ${
+                effectiveRecurrence !== "once" ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+            >
+              Necha marta?
+              <input
+                type="number"
+                min={2}
+                max={12}
+                value={occurrences}
+                onChange={(e) => setOccurrences(Math.max(2, Number(e.target.value)))}
+                className="w-20 rounded-md border border-gray-200 px-2 py-1.5 text-right"
+              />
+            </label>
+          </div>
         </div>
 
-        <div className="sticky bottom-0 border-t border-gray-200 bg-white p-4">
+        <div className="shrink-0 border-t border-gray-200 bg-white p-4">
           {createBooking.isError && (
             <p className="mb-2 text-center text-xs text-red-600">
               {isAxiosError(createBooking.error) && typeof createBooking.error.response?.data?.detail === "string"
