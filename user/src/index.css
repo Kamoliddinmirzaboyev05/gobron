@@ -31,3 +31,11 @@ body {
 .field-card-swiper .swiper-pagination-bullet-active {
   opacity: 1;
 }
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

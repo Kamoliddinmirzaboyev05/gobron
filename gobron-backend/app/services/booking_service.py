@@ -6,11 +6,16 @@ UPDATE commits; the second raises StaleDataError and we return a 409. No row
 locks are held, so the DB stays snappy under load.
 
 Recurrence:
-  * ONCE   -> just the chosen slot.
+  * ONCE   -> just the chosen slot(s).
   * DAILY  -> the same start_time on the next N days (that have a slot).
   * WEEKLY -> the same start_time every 7 days for the next N occurrences.
 All occurrences share one recurrence_group_id so they can be listed/cancelled
 together while remaining individually cancellable.
+
+Multi-slot (ONCE only): a player can grab several back-to-back slots (e.g.
+11:00-12:00 + 12:00-13:00) as one 2-hour booking, but not a gappy selection
+like 11:00-12:00 + 15:00-16:00 - contiguity is enforced in _contiguous_slots.
+They share a group_id the same way recurrence occurrences do.
 """
 import uuid
 from datetime import timedelta
@@ -56,11 +61,25 @@ class BookingService:
             result.append(match)
         return result
 
+    def _contiguous_slots(self, slots: list[Slot]) -> list[Slot]:
+        """Order slots by start_time and verify they form one unbroken block
+        on the same field/date (each slot's end_time is the next one's start).
+        """
+        ordered = sorted(slots, key=lambda s: s.start_time)
+        for prev, nxt in zip(ordered, ordered[1:]):
+            if (
+                prev.field_id != nxt.field_id
+                or prev.slot_date != nxt.slot_date
+                or prev.end_time != nxt.start_time
+            ):
+                raise SlotUnavailableError("Slots must be back-to-back on the same field/date")
+        return ordered
+
     async def create_booking(
         self,
         *,
         user_id: int,
-        slot_id: int,
+        slot_ids: list[int],
         recurrence: RecurrenceType = RecurrenceType.ONCE,
         occurrences: int = 1,
     ) -> list[Booking]:
@@ -68,19 +87,29 @@ class BookingService:
 
         Raises SlotUnavailableError if any target slot is not bookable.
         """
-        anchor = await self.slots.get(slot_id)
-        if anchor is None:
-            raise SlotUnavailableError("Slot not found")
-        if anchor.status != SlotStatus.AVAILABLE:
-            raise SlotUnavailableError("Slot is not available")
+        if recurrence != RecurrenceType.ONCE:
+            anchor = await self.slots.get(slot_ids[0])
+            if anchor is None:
+                raise SlotUnavailableError("Slot not found")
+            if anchor.status != SlotStatus.AVAILABLE:
+                raise SlotUnavailableError("Slot is not available")
+            targets = await self._target_slots(anchor, recurrence, occurrences)
+        else:
+            fetched = await self.slots.get_many(slot_ids)
+            if len(fetched) != len(slot_ids):
+                raise SlotUnavailableError("Slot not found")
+            targets = self._contiguous_slots(fetched)
+            if any(s.status != SlotStatus.AVAILABLE for s in targets):
+                # All-or-nothing: partially booking a contiguous block would
+                # leave the exact gap this feature exists to prevent.
+                raise SlotUnavailableError("One of the selected slots is no longer available")
 
-        targets = await self._target_slots(anchor, recurrence, occurrences)
-        group_id = str(uuid.uuid4()) if recurrence != RecurrenceType.ONCE else None
+        group_id = str(uuid.uuid4()) if len(targets) > 1 else None
 
         bookings: list[Booking] = []
         for slot in targets:
             if slot.status != SlotStatus.AVAILABLE:
-                continue  # skip occurrences already taken; book the rest
+                continue  # skip occurrences already taken; book the rest (recurrence only)
             slot.status = SlotStatus.BOOKED  # bumps version_id on flush
             booking = Booking(
                 user_id=user_id,

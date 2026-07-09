@@ -21,7 +21,7 @@ async def create_booking(body: BookingCreate, db: DBSession, user: CurrentUser):
     try:
         bookings = await BookingService(db).create_booking(
             user_id=user.id,
-            slot_id=body.slot_id,
+            slot_ids=body.slot_ids,
             recurrence=body.recurrence_type,
             occurrences=body.occurrences,
         )

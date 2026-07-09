@@ -19,7 +19,7 @@ export function useMyBookings() {
 }
 
 export interface CreateBookingInput {
-  slot_id: number;
+  slot_ids: number[];
   recurrence_type: RecurrenceType;
   occurrences: number;
 }

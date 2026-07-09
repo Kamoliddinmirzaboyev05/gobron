@@ -15,6 +15,10 @@ class SlotRepository:
     async def get(self, slot_id: int) -> Slot | None:
         return await self.db.get(Slot, slot_id)
 
+    async def get_many(self, slot_ids: list[int]) -> list[Slot]:
+        stmt = select(Slot).where(Slot.id.in_(slot_ids))
+        return list((await self.db.execute(stmt)).scalars().all())
+
     async def list_for_field(
         self,
         field_id: int,
