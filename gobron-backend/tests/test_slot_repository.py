@@ -44,3 +44,18 @@ async def test_without_available_only_no_time_cutoff_is_applied():
     await SlotRepository(db).list_for_field(1, on_date=date.today(), available_only=False)
 
     assert "slots.start_time >" not in db.sql
+
+
+def test_local_clock_is_tashkent_not_the_servers_utc():
+    """Production runs UTC. Cutting slots off at server-local time meant
+    11:00 was still "in the future" at 15:00 Tashkent.
+    """
+    from datetime import timezone
+
+    from app.utils.clock import now_local, today_local
+
+    utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
+    offset_hours = (now_local() - utc_now).total_seconds() / 3600
+
+    assert 4.9 < offset_hours < 5.1  # Asia/Tashkent = UTC+5, no DST
+    assert today_local() == now_local().date()

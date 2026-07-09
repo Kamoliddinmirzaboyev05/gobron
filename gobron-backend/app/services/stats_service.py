@@ -14,6 +14,7 @@ from app.models.enums import BookingStatus, SlotStatus
 from app.models.field import Field
 from app.models.slot import Slot
 from app.schemas.stats import DashboardStats, PopularSlot, RevenuePoint
+from app.utils.clock import today_local
 
 _REVENUE_STATUSES = (BookingStatus.CONFIRMED, BookingStatus.COMPLETED)
 
@@ -29,7 +30,7 @@ class StatsService:
         date_from: date | None = None,
         date_to: date | None = None,
     ) -> DashboardStats:
-        today = date.today()
+        today = today_local()
         date_from = date_from or (today - timedelta(days=29))
         date_to = date_to or today
 

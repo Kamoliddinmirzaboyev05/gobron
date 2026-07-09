@@ -24,6 +24,7 @@ from app.schemas.owner import (
     OwnerStatsSummary,
     VenueIn,
 )
+from app.utils.clock import today_local
 
 
 def time_ranges_overlap(
@@ -287,7 +288,7 @@ class OwnerService:
         return await self._get_owned_booking_request(owner, booking_id)
 
     async def stats_summary(self, owner: User) -> OwnerStatsSummary:
-        today = date.today()
+        today = today_local()
         week_start = today - timedelta(days=today.weekday())
         month_start = today.replace(day=1)
         return OwnerStatsSummary(

@@ -23,6 +23,7 @@ from app.models.enums import SlotStatus
 from app.models.field import Field
 from app.models.slot import Slot
 from app.utils.pricing import compute_slot_price
+from app.utils.clock import today_local
 
 
 def _iter_start_times(
@@ -117,7 +118,7 @@ class SlotService:
         Intended to be called from a scheduled job so there are always
         ``days_ahead`` days of availability visible to players.
         """
-        today = date.today()
+        today = today_local()
         return await self.generate_slots_for_field(
             field, today, today + timedelta(days=days_ahead)
         )

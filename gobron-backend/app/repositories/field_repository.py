@@ -12,6 +12,7 @@ from app.models.booking import Booking
 from app.models.enums import BookingStatus, SlotStatus
 from app.models.field import Field
 from app.models.slot import Slot
+from app.utils.clock import today_local
 
 FieldSort = Literal["rating", "cheapest", "popular"]
 
@@ -57,7 +58,7 @@ class FieldRepository:
                 .where(
                     Slot.field_id == Field.id,
                     Slot.status == SlotStatus.AVAILABLE,
-                    Slot.slot_date == date.today(),
+                    Slot.slot_date == today_local(),
                 )
                 .exists()
             )
