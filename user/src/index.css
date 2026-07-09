@@ -19,3 +19,15 @@ body,
 body {
   @apply bg-gray-50 text-gray-900 antialiased;
 }
+
+/* Swiper pagination bullets read poorly on photos with the library default
+   (dark gray on light) - brighten them for the image-carousel use cases. */
+.hero-swiper .swiper-pagination-bullet,
+.field-card-swiper .swiper-pagination-bullet {
+  background: #fff;
+  opacity: 0.6;
+}
+.hero-swiper .swiper-pagination-bullet-active,
+.field-card-swiper .swiper-pagination-bullet-active {
+  opacity: 1;
+}

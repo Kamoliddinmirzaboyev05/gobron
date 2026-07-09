@@ -84,7 +84,7 @@ export default function FieldDetail() {
                 }}
                 className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
                   sf.id === field.id
-                    ? "bg-pitch-600 text-white shadow-md"
+                    ? "bg-pitch-600 text-white shadow-sm"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
@@ -120,7 +120,7 @@ export default function FieldDetail() {
                 setDate(d.iso);
                 setSelected(null);
               }}
-              className={`flex min-w-14 shrink-0 flex-col items-center rounded-xl px-3 py-2 text-sm ${
+              className={`flex min-w-14 shrink-0 flex-col items-center rounded-lg px-3 py-2 text-sm ${
                 d.iso === date
                   ? "bg-pitch-600 text-white"
                   : "bg-white text-gray-600 ring-1 ring-gray-200"
@@ -142,7 +142,7 @@ export default function FieldDetail() {
               <button
                 key={s.id}
                 onClick={() => setSelected(s)}
-                className={`rounded-xl py-2.5 text-sm font-medium ring-1 ${
+                className={`rounded-lg py-2.5 text-sm font-medium ring-1 ${
                   selected?.id === s.id
                     ? "bg-pitch-600 text-white ring-pitch-600"
                     : "bg-white text-gray-700 ring-gray-200"
@@ -165,7 +165,7 @@ export default function FieldDetail() {
                 <button
                   key={r.value}
                   onClick={() => setRecurrence(r.value)}
-                  className={`flex-1 rounded-xl py-2 text-sm font-medium ring-1 ${
+                  className={`flex-1 rounded-lg py-2 text-sm font-medium ring-1 ${
                     recurrence === r.value
                       ? "bg-pitch-600 text-white ring-pitch-600"
                       : "bg-white text-gray-600 ring-gray-200"
@@ -184,7 +184,7 @@ export default function FieldDetail() {
                   max={12}
                   value={occurrences}
                   onChange={(e) => setOccurrences(Math.max(2, Number(e.target.value)))}
-                  className="w-20 rounded-lg border border-gray-200 px-2 py-1.5 text-right"
+                  className="w-20 rounded-md border border-gray-200 px-2 py-1.5 text-right"
                 />
               </label>
             )}
@@ -210,7 +210,7 @@ export default function FieldDetail() {
             <button
               onClick={confirm}
               disabled={createBooking.isPending}
-              className="flex items-center gap-2 rounded-xl bg-pitch-600 px-6 py-3 font-semibold text-white disabled:opacity-60"
+              className="flex items-center gap-2 rounded-lg bg-pitch-600 px-6 py-3 font-semibold text-white disabled:opacity-60"
             >
               <Check className="h-5 w-5" />
               {createBooking.isPending ? "..." : "So'rov yuborish"}

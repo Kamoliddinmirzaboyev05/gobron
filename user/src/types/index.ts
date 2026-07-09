@@ -81,6 +81,15 @@ export const bookingResultSchema = z.object({
   total_price: z.coerce.number(),
 });
 
+export const bannerSchema = z.object({
+  id: z.number(),
+  image_url: z.string(),
+  link: z.string().nullable(),
+  sort_order: z.number(),
+  is_active: z.boolean(),
+  created_at: z.string(),
+});
+
 export type TokenPair = z.infer<typeof tokenPairSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Field = z.infer<typeof fieldSchema>;
@@ -88,3 +97,4 @@ export type Slot = z.infer<typeof slotSchema>;
 export type Booking = z.infer<typeof bookingSchema>;
 export type BookingResult = z.infer<typeof bookingResultSchema>;
 export type RecurrenceType = Booking["recurrence_type"];
+export type Banner = z.infer<typeof bannerSchema>;

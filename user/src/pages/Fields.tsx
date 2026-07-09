@@ -31,7 +31,7 @@ export default function Fields() {
   return (
     <div className="px-4 py-4">
       <div className="flex items-center gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-gray-200">
+        <div className="flex flex-1 items-center gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-gray-200">
           <Search className="h-4 w-4 text-gray-400" />
           <input
             value={search}
@@ -42,14 +42,14 @@ export default function Fields() {
         </div>
         <button
           onClick={() => setShowFilters((s) => !s)}
-          className="rounded-xl bg-white p-2.5 ring-1 ring-gray-200"
+          className="rounded-lg bg-white p-2.5 ring-1 ring-gray-200"
         >
           <SlidersHorizontal className="h-4 w-4 text-gray-600" />
         </button>
       </div>
 
       {showFilters && (
-        <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200">
+        <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-white p-3 ring-1 ring-gray-200">
           <label className="text-xs text-gray-500">
             Maks. narx
             <input
@@ -57,7 +57,7 @@ export default function Fields() {
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               placeholder="so'm"
-              className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
+              className="mt-1 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
             />
           </label>
           <label className="text-xs text-gray-500">
@@ -65,7 +65,7 @@ export default function Fields() {
             <select
               value={minRating}
               onChange={(e) => setMinRating(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
+              className="mt-1 w-full rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-900"
             >
               <option value="">Barchasi</option>
               <option value="3">3+</option>

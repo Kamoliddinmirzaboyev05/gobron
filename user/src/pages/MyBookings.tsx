@@ -29,7 +29,7 @@ export default function MyBookings() {
       <h1 className="mb-4 text-lg font-semibold">Mening bronlarim</h1>
       <div className="grid gap-3">
         {data.map((b) => (
-          <div key={b.id} className="rounded-2xl bg-white p-4 ring-1 ring-gray-100">
+          <div key={b.id} className="rounded-xl bg-white p-4 ring-1 ring-gray-100">
             <div className="flex items-start justify-between">
               <div>
                 {b.slot && (
@@ -50,7 +50,7 @@ export default function MyBookings() {
               <button
                 onClick={() => cancel.mutate(b.id)}
                 disabled={cancel.isPending}
-                className="mt-3 w-full rounded-lg border border-red-200 py-2 text-sm font-medium text-red-600 disabled:opacity-50"
+                className="mt-3 w-full rounded-md border border-red-200 py-2 text-sm font-medium text-red-600 disabled:opacity-50"
               >
                 Bekor qilish
               </button>

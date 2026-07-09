@@ -11,7 +11,7 @@ export function Spinner() {
 
 export function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="mx-4 my-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+    <div className="mx-4 my-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">
       {message}
     </div>
   );
