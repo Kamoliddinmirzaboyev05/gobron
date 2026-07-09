@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.booking import Booking
-from app.models.enums import BookingStatus
+from app.models.enums import BookingStatus, SlotStatus
 from app.models.review import Review
 from app.models.slot import Slot
 from app.utils.clock import now_local
@@ -20,13 +20,18 @@ class BookingRepository:
         return await self.db.get(Booking, booking_id)
 
     async def settle_finished_bookings(self) -> None:
-        """Mark CONFIRMED bookings whose slot has ended as COMPLETED.
+        """Resolve bookings whose slot has already ended.
 
-        Nothing else ever performs this transition, so without it a player
-        booking stays CONFIRMED forever and can never be rated.
+        Nothing else performs these transitions, so without it a CONFIRMED
+        booking stays confirmed forever (and can never be rated), and a
+        PENDING request the owner never looked at keeps offering accept/reject
+        for a game that is already in the past.
 
-        ponytail: materialized on read (idempotent, one UPDATE). Move it to the
-        daily job that slot generation also wants once one exists.
+          CONFIRMED -> COMPLETED   (it was played)
+          PENDING   -> CANCELLED   (nobody answered in time; free the slot)
+
+        ponytail: materialized on read, idempotent. Move it to the daily job
+        that slot generation also wants once one exists.
         """
         now = now_local()
         finished = (
@@ -39,11 +44,42 @@ class BookingRepository:
             )
             .scalar_subquery()
         )
+
         await self.db.execute(
             update(Booking)
             .where(Booking.status == BookingStatus.CONFIRMED, Booking.slot_id.in_(finished))
             .values(status=BookingStatus.COMPLETED)
         )
+
+        expired_slot_ids = list(
+            (
+                await self.db.execute(
+                    select(Booking.slot_id).where(
+                        Booking.status == BookingStatus.PENDING,
+                        Booking.slot_id.in_(finished),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if expired_slot_ids:
+            await self.db.execute(
+                update(Booking)
+                .where(
+                    Booking.status == BookingStatus.PENDING,
+                    Booking.slot_id.in_(expired_slot_ids),
+                )
+                .values(status=BookingStatus.CANCELLED)
+            )
+            # Creating a request marks the slot BOOKED, so releasing it here
+            # keeps the slot table honest even though the time has passed.
+            await self.db.execute(
+                update(Slot)
+                .where(Slot.id.in_(expired_slot_ids), Slot.status == SlotStatus.BOOKED)
+                .values(status=SlotStatus.AVAILABLE)
+            )
+
         await self.db.commit()
 
     async def list_all(

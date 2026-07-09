@@ -6,6 +6,7 @@ interface OwnerFieldApi {
   venue_id: number
   name: string
   size: string | null
+  phone: string | null
   surface_type: 'open' | 'covered'
   price_per_hour: number
   images: string[]
@@ -19,6 +20,7 @@ function fromApi(f: OwnerFieldApi): Field {
     venueId: String(f.venue_id),
     name: f.name,
     size: f.size ?? undefined,
+    phone: f.phone ?? undefined,
     surfaceType: f.surface_type,
     pricePerHour: f.price_per_hour,
     images: f.images,
@@ -32,6 +34,7 @@ function toApi(field: Omit<Field, 'id' | 'venueId'>) {
   return {
     name: field.name,
     size: field.size || null,
+    phone: field.phone || null,
     surface_type: field.surfaceType,
     price_per_hour: field.pricePerHour,
     images: field.images,

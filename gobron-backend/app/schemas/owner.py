@@ -37,6 +37,7 @@ class VenueOut(VenueIn):
 class OwnerFieldIn(BaseModel):
     name: str = Field(..., max_length=150)
     size: str | None = Field(None, max_length=40)
+    phone: str | None = Field(None, max_length=20)
     surface_type: str = Field("open", pattern="^(open|covered)$")
     price_per_hour: Decimal
     images: list[str] = []

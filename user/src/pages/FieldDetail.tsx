@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Star } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
@@ -68,6 +68,14 @@ export default function FieldDetail() {
           <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
             <MapPin className="h-4 w-4" /> {field.address}
           </p>
+        )}
+        {field.phone && (
+          <a
+            href={`tel:${field.phone}`}
+            className="mt-1 flex items-center gap-1 text-sm font-medium text-pitch-600"
+          >
+            <Phone className="h-4 w-4" /> {field.phone}
+          </a>
         )}
         {field.description && (
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{field.description}</p>

@@ -3,6 +3,7 @@ import { updateField, createField } from '../api/fields'
 import { uploadImage } from '../api/media'
 import type { Field } from '../types'
 import { extractDigits, formatThousands } from '../utils/number'
+import { extractPhoneDigits, formatUzPhone, toE164, PHONE_DIGITS_LENGTH } from '../utils/phone'
 
 function parseSize(size: string | undefined): [string, string] {
   const match = size?.match(/^(\d+)\s*x\s*(\d+)$/i)
@@ -24,6 +25,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
   const [length, setLength] = useState(initialLength)
   const [width, setWidth] = useState(initialWidth)
   const [price, setPrice] = useState(existingField?.pricePerHour?.toString() ?? '')
+  const [phone, setPhone] = useState(extractPhoneDigits(existingField?.phone ?? ''))
   const [images, setImages] = useState<string[]>(existingField?.images ?? [])
   const [pendingUploads, setPendingUploads] = useState<{ id: string; progress: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -43,6 +45,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
       setLength(l)
       setWidth(w)
       setPrice(existingField.pricePerHour?.toString() ?? '')
+      setPhone(extractPhoneDigits(existingField.phone ?? ''))
       setImages(existingField.images || [])
       setSurfaceType(existingField.surfaceType)
       setIsActive(existingField.isActive)
@@ -84,6 +87,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
     if (!price.trim()) e.price = 'Narxini kiriting'
     else if (isNaN(Number(price))) e.price = 'Raqam kiriting'
     if (!bookingWindowDays.trim() || Number(bookingWindowDays) < 1) e.bookingWindowDays = 'Kamida 1 kun'
+    if (phone && phone.length !== PHONE_DIGITS_LENGTH) e.phone = "To'liq raqam kiriting"
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -96,6 +100,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
       name: name.trim(),
       size: length.trim() && width.trim() ? `${length.trim()}x${width.trim()}` : undefined,
       pricePerHour: Number(price),
+      phone: phone ? toE164(phone) : undefined,
       surfaceType,
       images,
       peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
@@ -212,6 +217,25 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
               onChange={(e) => setPrice(extractDigits(e.target.value))}
             />
             {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+          </div>
+
+          {/* Contact phone */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Telefon raqami
+            </label>
+            <input
+              className="input-field"
+              type="tel"
+              inputMode="numeric"
+              placeholder="+998 90 123 45 67"
+              value={phone ? formatUzPhone(phone) : ''}
+              onChange={(e) => setPhone(extractPhoneDigits(e.target.value))}
+            />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Mijozlar maydon sahifasida ko'radi
+            </p>
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           {/* Booking window */}

@@ -15,6 +15,7 @@ from app.models.slot import Slot
 from app.models.user import User
 from app.models.venue import Venue
 from app.models.subscription_payment import SubscriptionPayment
+from app.repositories.booking_repository import BookingRepository
 from app.services.booking_notifications import send_confirmation
 from app.services.slot_service import SlotService
 from app.schemas.owner import (
@@ -78,6 +79,7 @@ class OwnerService:
             venue_id=venue.id,
             name=body.name,
             size=body.size,
+            phone=body.phone,
             surface_type=body.surface_type,
             price_per_hour=body.price_per_hour,
             price_per_slot=body.price_per_hour,
@@ -141,6 +143,7 @@ class OwnerService:
         players made on their fields. These live in two different tables, so
         they're projected into one shape and merged here.
         """
+        await BookingRepository(self.db).settle_finished_bookings()
         manual_stmt = select(ManualBooking).where(ManualBooking.owner_id == owner.id)
         if day is not None:
             manual_stmt = manual_stmt.where(ManualBooking.booking_date == day)
@@ -346,6 +349,9 @@ class OwnerService:
         return booking
 
     async def list_booking_requests(self, owner: User) -> list[Booking]:
+        # A request for a slot that already passed is dead; don't offer
+        # accept/reject on it.
+        await BookingRepository(self.db).settle_finished_bookings()
         stmt = (
             select(Booking)
             .join(Slot, Booking.slot_id == Slot.id)

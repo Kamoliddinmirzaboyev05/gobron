@@ -9,6 +9,7 @@ class FieldBase(BaseModel):
     name: str = Field(..., max_length=150)
     description: str | None = None
     address: str | None = Field(None, max_length=255)
+    phone: str | None = Field(None, max_length=20)
     latitude: float | None = None
     longitude: float | None = None
     images: list[str] = []

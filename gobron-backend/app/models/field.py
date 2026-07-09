@@ -60,6 +60,8 @@ class Field(Base):
     price_per_slot: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=Decimal("0"))
     size: Mapped[str | None] = mapped_column(String(40))
     surface_type: Mapped[str] = mapped_column(String(20), default="open", nullable=False)
+    # Contact number players see on the field page.
+    phone: Mapped[str | None] = mapped_column(String(20))
     price_per_hour: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), default=Decimal("0")
     )

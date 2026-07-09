@@ -30,6 +30,7 @@ export const fieldSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   address: z.string().nullable(),
+  phone: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
   images: z.array(z.string()),
