@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isAxiosError } from "axios";
 import { X, Check } from "lucide-react";
 import { useSlots } from "../hooks/useSlots";
 import { useCreateBooking } from "../hooks/useBookings";
@@ -211,7 +212,9 @@ export default function BookingModal({
         <div className="sticky bottom-0 border-t border-gray-200 bg-white p-4">
           {createBooking.isError && (
             <p className="mb-2 text-center text-xs text-red-600">
-              Tanlangan vaqt band bo'lib qoldi. Boshqa vaqt tanlang.
+              {isAxiosError(createBooking.error) && typeof createBooking.error.response?.data?.detail === "string"
+                ? createBooking.error.response.data.detail
+                : "Tanlangan vaqt band bo'lib qoldi. Boshqa vaqt tanlang."}
             </p>
           )}
           <div className="flex items-center justify-between">
