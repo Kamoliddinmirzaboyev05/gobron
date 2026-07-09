@@ -6,7 +6,7 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { useField, useFields } from "../hooks/useFields";
-import { formatPrice, shortTime } from "../lib/format";
+import { formatPrice, shortTime, slotUnit } from "../lib/format";
 import { amenityLabel } from "../lib/amenities";
 import { FieldDetailSkeleton } from "../components/Skeleton";
 import { ErrorBox } from "../components/ui";
@@ -56,6 +56,53 @@ export default function FieldDetail() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
       </div>
+
+      {/* Sibling pitches: the whole point of this venue having more than one,
+          so it leads the page rather than hiding at the bottom. Scrolls, so
+          three or ten pitches all work. */}
+      {siblingFields.length > 1 && (
+        <div className="border-b border-gray-100 bg-white px-4 py-4">
+          <h2 className="mb-3 text-base font-bold text-gray-900">
+            Bu joyda {siblingFields.length} ta maydon
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-1 hide-scrollbar">
+            {siblingFields.map((sf) => {
+              const active = sf.id === field.id;
+              return (
+                <button
+                  key={sf.id}
+                  onClick={() => navigate(`/fields/${sf.id}`, { replace: true })}
+                  className={`w-36 shrink-0 overflow-hidden rounded-xl text-left transition-all ${
+                    active
+                      ? "ring-2 ring-pitch-600"
+                      : "opacity-80 ring-1 ring-gray-200 active:opacity-100"
+                  }`}
+                >
+                  <div className="relative h-20 bg-pitch-50">
+                    {sf.images[0] ? (
+                      <img src={sf.images[0]} alt={sf.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-2xl">⚽</div>
+                    )}
+                    {active && (
+                      <span className="absolute right-1.5 top-1.5 rounded-full bg-pitch-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        Tanlangan
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <p className="truncate text-sm font-bold text-gray-900">{sf.name}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-pitch-600">
+                      {formatPrice(sf.price_per_slot)}
+                      <span className="font-normal text-gray-400">/{slotUnit(sf.slot_duration)}</span>
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="px-4 py-4">
         <div className="flex items-start justify-between gap-2">
@@ -118,28 +165,6 @@ export default function FieldDetail() {
           </div>
         )}
 
-        {siblingFields.length > 1 && (
-          <div className="mt-6">
-            <h2 className="mb-2 text-sm font-semibold text-gray-700">
-              Bu yerda {siblingFields.length} ta maydon bor
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-              {siblingFields.map((sf) => (
-                <button
-                  key={sf.id}
-                  onClick={() => navigate(`/fields/${sf.id}`, { replace: true })}
-                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${
-                    sf.id === field.id
-                      ? "bg-pitch-600 text-white"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {sf.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Sticky booking bar */}
@@ -149,7 +174,7 @@ export default function FieldDetail() {
             <p className="text-xs text-gray-400">Narxi</p>
             <p className="text-lg font-bold text-pitch-600">
               {formatPrice(field.price_per_slot)}
-              <span className="ml-1 text-sm font-normal text-gray-400">/ {field.slot_duration} daq</span>
+              <span className="ml-1 text-sm font-normal text-gray-400">/ {slotUnit(field.slot_duration)}</span>
             </p>
           </div>
           <button

@@ -5,7 +5,7 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import type { Field } from "../types";
-import { formatPrice } from "../lib/format";
+import { formatPrice, slotUnit } from "../lib/format";
 
 export default function FieldCard({ field }: { field: Field }) {
   const images = field.images;
@@ -61,7 +61,7 @@ export default function FieldCard({ field }: { field: Field }) {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Narxi</p>
             <p className="mt-1 text-lg font-bold text-pitch-600">
               {formatPrice(field.price_per_slot)}
-              <span className="ml-1 text-sm font-normal text-gray-400">/ {field.slot_duration} daq</span>
+              <span className="ml-1 text-sm font-normal text-gray-400">/ {slotUnit(field.slot_duration)}</span>
             </p>
           </div>
           <div className="rounded-lg bg-pitch-50 px-4 py-2 text-sm font-semibold text-pitch-600 transition-colors group-hover:bg-pitch-100">

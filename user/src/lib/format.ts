@@ -12,6 +12,11 @@ export function shortTime(t: string): string {
   return t.slice(0, 5);
 }
 
+/** What one slot's price buys: 60 -> "soat", anything else -> "30 daq". */
+export function slotUnit(minutes: number): string {
+  return minutes === 60 ? "soat" : `${minutes} daq`;
+}
+
 const WEEKDAYS_UZ = ["Yak", "Du", "Se", "Chor", "Pay", "Jum", "Sha"];
 const MONTHS_UZ = [
   "Yan", "Fev", "Mar", "Apr", "May", "Iyun",
