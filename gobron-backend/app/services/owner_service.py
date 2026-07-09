@@ -81,6 +81,9 @@ class OwnerService:
             opening_time=venue.opening_time,
             closing_time=venue.closing_time,
             working_days=venue.working_days,
+            address=venue.address,
+            latitude=venue.latitude,
+            longitude=venue.longitude,
             is_active=body.is_active,
             booking_window_days=body.booking_window_days,
         )
@@ -93,9 +96,13 @@ class OwnerService:
         self, owner: User, field_id: int, body: OwnerFieldIn
     ) -> Field:
         field = await self._get_owned_field(owner, field_id)
+        venue = await self.get_or_create_venue(owner)
         for key, value in body.model_dump().items():
             setattr(field, key, value)
         field.price_per_slot = body.price_per_hour
+        field.address = venue.address
+        field.latitude = venue.latitude
+        field.longitude = venue.longitude
         await self.db.commit()
         await self.db.refresh(field)
         return field

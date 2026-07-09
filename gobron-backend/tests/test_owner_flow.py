@@ -135,6 +135,68 @@ def test_time_ranges_overlap_detects_conflicts():
     assert not time_ranges_overlap(time(10, 0), time(11, 0), time(8, 0), time(10, 0))
 
 
+class FakeOwnerDB:
+    """Returns queued execute() results in call order; add/commit/refresh are no-ops."""
+
+    def __init__(self, results):
+        self._results = list(results)
+
+    async def execute(self, _stmt):
+        value = self._results.pop(0)
+        return type("Result", (), {"scalar_one_or_none": lambda self=None: value})()
+
+    def add(self, _obj):
+        pass
+
+    async def commit(self):
+        pass
+
+    async def refresh(self, _obj):
+        pass
+
+
+def _make_owner_service(results) -> "OwnerService":
+    from app.services.owner_service import OwnerService
+
+    service = OwnerService.__new__(OwnerService)
+    service.db = FakeOwnerDB(results)
+    return service
+
+
+@pytest.mark.asyncio
+async def test_create_field_copies_address_and_coordinates_from_venue():
+    from app.models.venue import Venue
+    from app.schemas.owner import OwnerFieldIn
+
+    venue = Venue(id=1, owner_id=9, address="Toshkent, Chilonzor", latitude=41.28, longitude=69.20)
+    service = _make_owner_service(results=[venue])  # _get_venue
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000")
+
+    field = await service.create_field(owner=User(id=9), body=body)
+
+    assert field.address == "Toshkent, Chilonzor"
+    assert field.latitude == 41.28
+    assert field.longitude == 69.20
+
+
+@pytest.mark.asyncio
+async def test_update_field_resyncs_address_and_coordinates_from_venue():
+    from app.models.field import Field
+    from app.models.venue import Venue
+    from app.schemas.owner import OwnerFieldIn
+
+    field = Field(id=5, owner_id=9, venue_id=1, address=None, latitude=None, longitude=None)
+    venue = Venue(id=1, owner_id=9, address="Samarqand, Registon", latitude=39.65, longitude=66.97)
+    service = _make_owner_service(results=[field, venue])  # _get_owned_field, _get_venue
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000")
+
+    updated = await service.update_field(owner=User(id=9), field_id=5, body=body)
+
+    assert updated.address == "Samarqand, Registon"
+    assert updated.latitude == 39.65
+    assert updated.longitude == 66.97
+
+
 def test_manual_booking_status_binds_lowercase_enum_values():
     from sqlalchemy.dialects import postgresql
 
