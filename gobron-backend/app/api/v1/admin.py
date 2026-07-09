@@ -9,12 +9,14 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.core.deps import DBSession, require_role
+from app.models.banner import Banner
 from app.models.broadcast import Broadcast
 from app.models.enums import BookingStatus, UserRole
 from app.models.field_owner import FieldOwner
 from app.models.user import User
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.banner import BannerCreate, BannerOut, BannerUpdate
 from app.schemas.booking import AdminBookingOut
 from app.schemas.broadcast import BroadcastCreate, BroadcastOut
 from app.schemas.field_owner import FieldOwnerCreate, FieldOwnerOut, FieldOwnerUpdate
@@ -294,3 +296,42 @@ async def get_broadcast(broadcast_id: int, db: DBSession):
     if bc is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Broadcast not found")
     return bc
+
+
+# --- Banners (user-web hero carousel) ---
+
+
+@router.get("/banners", response_model=list[BannerOut])
+async def list_all_banners(db: DBSession):
+    stmt = select(Banner).order_by(Banner.sort_order, Banner.id)
+    return list((await db.execute(stmt)).scalars().all())
+
+
+@router.post("/banners", response_model=BannerOut, status_code=status.HTTP_201_CREATED)
+async def create_banner(body: BannerCreate, db: DBSession):
+    banner = Banner(**body.model_dump())
+    db.add(banner)
+    await db.commit()
+    await db.refresh(banner)
+    return banner
+
+
+@router.patch("/banners/{banner_id}", response_model=BannerOut)
+async def update_banner(banner_id: int, body: BannerUpdate, db: DBSession):
+    banner = await db.get(Banner, banner_id)
+    if banner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Banner not found")
+    for key, value in body.model_dump(exclude_unset=True).items():
+        setattr(banner, key, value)
+    await db.commit()
+    await db.refresh(banner)
+    return banner
+
+
+@router.delete("/banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_banner(banner_id: int, db: DBSession):
+    banner = await db.get(Banner, banner_id)
+    if banner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Banner not found")
+    await db.delete(banner)
+    await db.commit()

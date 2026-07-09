@@ -15,6 +15,7 @@ from app.models.slot import Slot
 from app.models.user import User
 from app.models.venue import Venue
 from app.models.subscription_payment import SubscriptionPayment
+from app.services.slot_service import SlotService
 from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingUpdate,
@@ -90,6 +91,11 @@ class OwnerService:
         self.db.add(field)
         await self.db.commit()
         await self.db.refresh(field)
+        # Players book against pre-generated Slot rows, not the field itself -
+        # without this, a freshly created field has zero bookable slots until
+        # someone with superadmin access finds the manual "generate" button.
+        await SlotService(self.db).generate_daily_slots(field, field.booking_window_days)
+        await self.db.commit()
         return field
 
     async def update_field(
@@ -105,6 +111,11 @@ class OwnerService:
         field.longitude = venue.longitude
         await self.db.commit()
         await self.db.refresh(field)
+        # ponytail: re-extends the rolling slot window on every save so it
+        # self-heals without owner action; a real fix is the daily cron job
+        # slot_service.generate_daily_slots's own docstring says should exist.
+        await SlotService(self.db).generate_daily_slots(field, field.booking_window_days)
+        await self.db.commit()
         return field
 
     async def delete_field(self, owner: User, field_id: int) -> None:

@@ -2,6 +2,7 @@
 discover them from a single place.
 """
 from app.core.database import Base
+from app.models.banner import Banner
 from app.models.booking import Booking
 from app.models.broadcast import Broadcast
 from app.models.field import Field
@@ -16,6 +17,7 @@ from app.models.subscription_payment import SubscriptionPayment
 
 __all__ = [
     "Base",
+    "Banner",
     "User",
     "FieldOwner",
     "Venue",

@@ -14,13 +14,16 @@ class FakeUsers:
     async def get_by_phone(self, phone: str) -> User | None:
         return self.existing
 
-    async def create_field_owner_by_phone(self, phone: str, full_name: str) -> User:
+    async def create_field_owner_by_phone(
+        self, phone: str, full_name: str, hashed_password: str | None = None
+    ) -> User:
         parts = full_name.strip().split(maxsplit=1)
         self.created = User(
             id=123,
             phone=phone,
             first_name=parts[0],
             last_name=parts[1] if len(parts) > 1 else None,
+            hashed_password=hashed_password,
             role=UserRole.FIELD_OWNER,
             is_active=True,
             is_blocked=False,
@@ -170,7 +173,9 @@ async def test_create_field_copies_address_and_coordinates_from_venue():
 
     venue = Venue(id=1, owner_id=9, address="Toshkent, Chilonzor", latitude=41.28, longitude=69.20)
     service = _make_owner_service(results=[venue])  # _get_venue
-    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000")
+    # is_active=False short-circuits generate_daily_slots (tested separately
+    # below) so this fake DB doesn't also need to answer slot queries.
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000", is_active=False)
 
     field = await service.create_field(owner=User(id=9), body=body)
 
@@ -188,13 +193,42 @@ async def test_update_field_resyncs_address_and_coordinates_from_venue():
     field = Field(id=5, owner_id=9, venue_id=1, address=None, latitude=None, longitude=None)
     venue = Venue(id=1, owner_id=9, address="Samarqand, Registon", latitude=39.65, longitude=66.97)
     service = _make_owner_service(results=[field, venue])  # _get_owned_field, _get_venue
-    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000")
+    # is_active=False short-circuits generate_daily_slots (tested separately
+    # below) so this fake DB doesn't also need to answer slot queries.
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000", is_active=False)
 
     updated = await service.update_field(owner=User(id=9), field_id=5, body=body)
 
     assert updated.address == "Samarqand, Registon"
     assert updated.latitude == 39.65
     assert updated.longitude == 66.97
+
+
+@pytest.mark.asyncio
+async def test_create_field_generates_slots_for_active_field(monkeypatch):
+    from app.models.venue import Venue
+    from app.schemas.owner import OwnerFieldIn
+    import app.services.owner_service as owner_service_module
+
+    calls = []
+
+    class FakeSlotService:
+        def __init__(self, db):
+            pass
+
+        async def generate_daily_slots(self, field, days_ahead):
+            calls.append((field, days_ahead))
+
+    monkeypatch.setattr(owner_service_module, "SlotService", FakeSlotService)
+
+    venue = Venue(id=1, owner_id=9, address=None, latitude=None, longitude=None)
+    service = _make_owner_service(results=[venue])  # _get_venue
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000", booking_window_days=10)
+
+    field = await service.create_field(owner=User(id=9), body=body)
+
+    assert len(calls) == 1
+    assert calls[0] == (field, 10)
 
 
 def test_manual_booking_status_binds_lowercase_enum_values():
