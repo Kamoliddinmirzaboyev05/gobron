@@ -1,9 +1,10 @@
 import api from './client'
 import type { Booking, BookingStatus, ManualBookingInput } from '../types'
 
-interface ManualBookingApi {
+/** GET /owner/bookings merges two tables; `source` says which one a row is from. */
+interface OwnerBookingApi {
   id: number
-  owner_id: number
+  source: 'manual' | 'player'
   field_id: number
   booking_date: string
   start_time: string
@@ -15,11 +16,16 @@ interface ManualBookingApi {
   status: BookingStatus
 }
 
-function fromApi(b: ManualBookingApi): Booking {
+interface ManualBookingApi extends Omit<OwnerBookingApi, 'source'> {
+  owner_id: number
+}
+
+function fromApi(b: OwnerBookingApi | ManualBookingApi): Booking {
   return {
     id: String(b.id),
+    source: 'source' in b ? b.source : 'manual',
     fieldId: String(b.field_id),
-    customerName: b.customer_name ?? '',
+    customerName: b.customer_name ?? 'Mijoz',
     customerPhone: b.customer_phone ?? '',
     date: b.booking_date,
     startTime: b.start_time.slice(0, 5),
@@ -32,13 +38,13 @@ function fromApi(b: ManualBookingApi): Booking {
 
 /** All bookings for the owner, unfiltered (used by the Bookings tab). */
 export async function fetchBookings(): Promise<Booking[]> {
-  const { data } = await api.get<ManualBookingApi[]>('/owner/bookings')
+  const { data } = await api.get<OwnerBookingApi[]>('/owner/bookings')
   return data.map(fromApi)
 }
 
 /** Bookings for one date (used by the Stats/Dashboard "today" preview). */
 export async function fetchBookingsByDate(date: string): Promise<Booking[]> {
-  const { data } = await api.get<ManualBookingApi[]>('/owner/bookings', { params: { date } })
+  const { data } = await api.get<OwnerBookingApi[]>('/owner/bookings', { params: { date } })
   return data.map(fromApi)
 }
 

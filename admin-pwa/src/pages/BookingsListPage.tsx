@@ -19,9 +19,13 @@ function todayString(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+// 'booked' is the manual-booking active state; player bookings are 'pending'
+// until the owner accepts them, then 'confirmed'. All three are still upcoming.
+const ACTIVE_STATUSES = ['booked', 'pending', 'confirmed']
+
 function matchesBucket(b: Booking, bucket: Bucket, today: string): boolean {
   if (bucket === 'hammasi') return true
-  const isUpcoming = b.status === 'booked' && b.date >= today
+  const isUpcoming = ACTIVE_STATUSES.includes(b.status) && b.date >= today
   return bucket === 'faol' ? isUpcoming : !isUpcoming
 }
 
@@ -79,7 +83,7 @@ export default function BookingsListPage() {
           <div className="flex flex-col gap-2">
             {filtered.map((b) => (
               <BookingTile
-                key={b.id}
+                key={`${b.source}-${b.id}`}
                 booking={{ ...b, fieldName: fieldNameById.get(b.fieldId) }}
               />
             ))}

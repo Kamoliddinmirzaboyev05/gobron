@@ -53,6 +53,9 @@ export default function BookingTile({ booking: b }: { booking: Booking }) {
         <span className={`chip ${STATUS_STYLES[b.status]}`}>
           {STATUS_LABELS[b.status]}
         </span>
+        {b.source === 'player' && (
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">Ilova orqali</span>
+        )}
       </div>
     </div>
   )

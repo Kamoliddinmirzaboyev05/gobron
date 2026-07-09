@@ -28,6 +28,9 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     loadData()
+    // Keep an open requests screen fresh; Web Push covers the app-closed case.
+    const id = setInterval(loadData, 15_000)
+    return () => clearInterval(id)
   }, [])
 
   async function handleAccept(id: string) {

@@ -57,6 +57,9 @@ export type BookingStatus = 'pending' | 'confirmed' | 'booked' | 'cancelled' | '
 
 export interface Booking {
   id: string
+  /** 'manual' = owner typed it in; 'player' = booked through the user app.
+   *  `id` is only unique within a source. */
+  source: 'manual' | 'player'
   fieldId: string
   fieldName?: string
   customerName: string

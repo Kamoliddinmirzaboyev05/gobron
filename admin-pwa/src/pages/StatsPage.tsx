@@ -76,7 +76,7 @@ export default function StatsPage() {
               {todayBookings && todayBookings.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   {todayBookings.map((b) => (
-                    <BookingTile key={b.id} booking={b} />
+                    <BookingTile key={`${b.source}-${b.id}`} booking={b} />
                   ))}
                 </div>
               ) : (

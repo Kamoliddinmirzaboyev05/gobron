@@ -1,9 +1,11 @@
+import { useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import StatsPage from './StatsPage'
 import BookingsListPage from './BookingsListPage'
 import FieldsListPage from './FieldsListPage'
 import NotificationsPage from './NotificationsPage'
 import ProfilePage from './ProfilePage'
+import { useNotificationPrefsStore } from '../store/notificationPrefs'
 
 const tabs = [
   { to: 'stats', label: 'Asosiy', icon: DashboardIcon },
@@ -13,6 +15,14 @@ const tabs = [
 ]
 
 export default function HomeShell() {
+  const syncPush = useNotificationPrefsStore((s) => s.sync)
+
+  // A push subscription can be dropped by the browser (cleared storage, SW
+  // update); re-register on every app start when the pref says it's on.
+  useEffect(() => {
+    void syncPush()
+  }, [syncPush])
+
   return (
     <div className="flex flex-col min-h-dvh bg-scaffold dark:bg-gray-900">
       {/* Content area */}

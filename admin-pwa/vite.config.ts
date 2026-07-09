@@ -35,7 +35,10 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Push/notificationclick handlers live outside the generated SW so
+        // they aren't clobbered when workbox regenerates it.
+        importScripts: ['push-sw.js']
       }
     })
   ],

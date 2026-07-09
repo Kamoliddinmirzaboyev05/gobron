@@ -1,15 +1,23 @@
 import { Link } from 'react-router-dom'
+import { usePendingRequestCount } from '../hooks/usePendingRequests'
 
 export default function TopBar({ title }: { title: string }) {
+  const pending = usePendingRequestCount()
+
   return (
     <div className="bg-white dark:bg-gray-800 px-4 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
       <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
       <Link
         to="/home/notifications"
-        aria-label="Bildirishnomalar"
-        className="text-gray-500 dark:text-gray-300 p-1 -mr-1"
+        aria-label={pending > 0 ? `Bildirishnomalar (${pending} ta yangi)` : 'Bildirishnomalar'}
+        className="relative text-gray-500 dark:text-gray-300 p-1 -mr-1"
       >
         <BellIcon />
+        {pending > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {pending > 9 ? '9+' : pending}
+          </span>
+        )}
       </Link>
     </div>
   )
