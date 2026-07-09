@@ -1,6 +1,7 @@
 """Owner-scoped schemas for the Flutter admin app."""
 from datetime import date, time
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -86,6 +87,29 @@ class ManualBookingOut(BaseModel):
     price: Decimal
     note: str | None
     status: ManualBookingStatus
+
+
+class OwnerBookingOut(BaseModel):
+    """One row in the owner's Bandliklar feed.
+
+    Unifies two tables the owner cares about equally: bookings they typed in
+    themselves (`manual`) and bookings players made through the app
+    (`player`). `id` is only unique within a `source`, so the owner-only
+    actions (cancel/complete) must key on the pair, not the id alone.
+    """
+
+    id: int
+    source: Literal["manual", "player"]
+    field_id: int
+    booking_date: date
+    start_time: time
+    end_time: time
+    customer_name: str | None
+    customer_phone: str | None
+    price: Decimal
+    note: str | None
+    # ManualBookingStatus or BookingStatus, depending on `source`.
+    status: str
 
 
 class OwnerStatsSummary(BaseModel):

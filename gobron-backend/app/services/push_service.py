@@ -42,6 +42,14 @@ class PushService:
     async def send_to_field_owners(self, title: str, body: str, url: str = "/home/notifications") -> tuple[int, int]:
         """Push to every subscribed field-owner device. Returns (sent, failed)."""
         stmt = select(PushSubscription).join(User).where(User.role == UserRole.FIELD_OWNER)
+        return await self._send(stmt, title, body, url)
+
+    async def send_to_user(self, user_id: int, title: str, body: str, url: str = "/home/notifications") -> tuple[int, int]:
+        """Push to one user's subscribed devices. Returns (sent, failed)."""
+        stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
+        return await self._send(stmt, title, body, url)
+
+    async def _send(self, stmt, title: str, body: str, url: str) -> tuple[int, int]:
         subs = list((await self.db.execute(stmt)).scalars().all())
         if not subs:
             return 0, 0

@@ -14,6 +14,7 @@ from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingOut,
     ManualBookingUpdate,
+    OwnerBookingOut,
     OwnerFieldIn,
     OwnerFieldOut,
     OwnerStatsSummary,
@@ -65,7 +66,7 @@ async def delete_field(field_id: int, db: DBSession, user: User = Depends(_owner
     await OwnerService(db).delete_field(user, field_id)
 
 
-@router.get("/bookings", response_model=list[ManualBookingOut])
+@router.get("/bookings", response_model=list[OwnerBookingOut])
 async def list_bookings(
     db: DBSession,
     user: User = Depends(_owner),

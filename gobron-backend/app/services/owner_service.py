@@ -19,6 +19,7 @@ from app.services.slot_service import SlotService
 from app.schemas.owner import (
     ManualBookingCreate,
     ManualBookingUpdate,
+    OwnerBookingOut,
     OwnerFieldIn,
     OwnerStatsSummary,
     VenueIn,
@@ -125,12 +126,60 @@ class OwnerService:
 
     async def list_bookings(
         self, owner: User, day: date | None = None
-    ) -> list[ManualBooking]:
-        stmt = select(ManualBooking).where(ManualBooking.owner_id == owner.id)
+    ) -> list[OwnerBookingOut]:
+        """Owner's whole schedule: their own manual entries plus the bookings
+        players made on their fields. These live in two different tables, so
+        they're projected into one shape and merged here.
+        """
+        manual_stmt = select(ManualBooking).where(ManualBooking.owner_id == owner.id)
         if day is not None:
-            stmt = stmt.where(ManualBooking.booking_date == day)
-        stmt = stmt.order_by(ManualBooking.booking_date, ManualBooking.start_time)
-        return list((await self.db.execute(stmt)).scalars().all())
+            manual_stmt = manual_stmt.where(ManualBooking.booking_date == day)
+        manual = (await self.db.execute(manual_stmt)).scalars().all()
+
+        player_stmt = (
+            select(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .options(joinedload(Booking.user), joinedload(Booking.slot))
+            .where(Field.owner_id == owner.id)
+        )
+        if day is not None:
+            player_stmt = player_stmt.where(Slot.slot_date == day)
+        player = (await self.db.execute(player_stmt)).scalars().all()
+
+        rows = [
+            OwnerBookingOut(
+                id=b.id,
+                source="manual",
+                field_id=b.field_id,
+                booking_date=b.booking_date,
+                start_time=b.start_time,
+                end_time=b.end_time,
+                customer_name=b.customer_name,
+                customer_phone=b.customer_phone,
+                price=b.price,
+                note=b.note,
+                status=b.status.value,
+            )
+            for b in manual
+        ] + [
+            OwnerBookingOut(
+                id=b.id,
+                source="player",
+                field_id=b.slot.field_id,
+                booking_date=b.slot.slot_date,
+                start_time=b.slot.start_time,
+                end_time=b.slot.end_time,
+                customer_name=b.user.full_name if b.user else None,
+                customer_phone=b.user.phone if b.user else None,
+                price=b.total_price,
+                note=None,
+                status=b.status.value,
+            )
+            for b in player
+        ]
+        rows.sort(key=lambda r: (r.booking_date, r.start_time))
+        return rows
 
     async def create_manual_booking(
         self, owner: User, body: ManualBookingCreate
@@ -216,8 +265,10 @@ class OwnerService:
         booking = await self._get_owned_booking_request(owner, booking_id)
         booking.status = BookingStatus.CONFIRMED
         await self.db.commit()
-        await self.db.refresh(booking)
-        return booking
+        # AdminBookingOut serializes .slot/.user; refresh() expires them, so
+        # re-load eagerly rather than letting pydantic trigger a lazy load
+        # outside async context (MissingGreenlet -> 500 after a successful write).
+        return await self._get_owned_booking_request(owner, booking_id)
 
     async def reject_booking_request(self, owner: User, booking_id: int) -> Booking:
         booking = await self._get_owned_booking_request(owner, booking_id)
@@ -225,8 +276,7 @@ class OwnerService:
         if booking.slot:
             booking.slot.status = SlotStatus.AVAILABLE
         await self.db.commit()
-        await self.db.refresh(booking)
-        return booking
+        return await self._get_owned_booking_request(owner, booking_id)
 
     async def stats_summary(self, owner: User) -> OwnerStatsSummary:
         today = date.today()
@@ -291,31 +341,57 @@ class OwnerService:
     async def _sum_revenue(
         self, owner_id: int, start_date: date, end_date: date
     ) -> Decimal:
-        stmt = select(func.coalesce(func.sum(ManualBooking.price), 0)).where(
+        manual = select(func.coalesce(func.sum(ManualBooking.price), 0)).where(
             self._active_booking_period(owner_id, start_date, end_date)
         )
-        return Decimal(str((await self.db.execute(stmt)).scalar_one()))
+        player = (
+            select(func.coalesce(func.sum(Booking.total_price), 0))
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .where(self._earned_player_booking_period(owner_id, start_date, end_date))
+        )
+        manual_total = (await self.db.execute(manual)).scalar_one()
+        player_total = (await self.db.execute(player)).scalar_one()
+        return Decimal(str(manual_total)) + Decimal(str(player_total))
 
     async def _count_bookings(
         self, owner_id: int, start_date: date, end_date: date
     ) -> int:
-        stmt = select(func.count(ManualBooking.id)).where(
+        manual = select(func.count(ManualBooking.id)).where(
             self._active_booking_period(owner_id, start_date, end_date)
         )
-        return int((await self.db.execute(stmt)).scalar_one())
+        player = (
+            select(func.count(Booking.id))
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .where(self._earned_player_booking_period(owner_id, start_date, end_date))
+        )
+        return int((await self.db.execute(manual)).scalar_one()) + int(
+            (await self.db.execute(player)).scalar_one()
+        )
 
     async def _top_field_name(
         self, owner_id: int, start_date: date, end_date: date
     ) -> str | None:
-        stmt = (
-            select(Field.name)
+        manual = (
+            select(Field.name, func.count(ManualBooking.id).label("n"))
             .join(ManualBooking, ManualBooking.field_id == Field.id)
             .where(self._active_booking_period(owner_id, start_date, end_date))
             .group_by(Field.id, Field.name)
-            .order_by(func.count(ManualBooking.id).desc())
-            .limit(1)
         )
-        return (await self.db.execute(stmt)).scalar_one_or_none()
+        player = (
+            select(Field.name, func.count(Booking.id).label("n"))
+            .select_from(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .where(self._earned_player_booking_period(owner_id, start_date, end_date))
+            .group_by(Field.id, Field.name)
+        )
+        totals: dict[str, int] = {}
+        for stmt in (manual, player):
+            for name, count in (await self.db.execute(stmt)).all():
+                totals[name] = totals.get(name, 0) + count
+        return max(totals, key=totals.get) if totals else None
 
     def _active_booking_period(self, owner_id: int, start_date: date, end_date: date):
         return and_(
@@ -323,6 +399,22 @@ class OwnerService:
             ManualBooking.booking_date >= start_date,
             ManualBooking.booking_date <= end_date,
             ManualBooking.status != ManualBookingStatus.CANCELLED,
+        )
+
+    def _earned_player_booking_period(
+        self, owner_id: int, start_date: date, end_date: date
+    ):
+        """Player bookings that count as the owner's earnings.
+
+        Unlike manual bookings (owner types them in, so they're real the moment
+        they exist), a player booking starts as PENDING and is only money once
+        the owner accepts it - so PENDING is excluded here, not just CANCELLED.
+        """
+        return and_(
+            Field.owner_id == owner_id,
+            Slot.slot_date >= start_date,
+            Slot.slot_date <= end_date,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED]),
         )
 
     async def list_subscription_payments(self, owner: User) -> list[SubscriptionPayment]:
