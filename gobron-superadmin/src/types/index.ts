@@ -109,6 +109,15 @@ export const broadcastSchema = z.object({
   sent_at: z.string().nullable(),
 });
 
+export const bannerSchema = z.object({
+  id: z.number(),
+  image_url: z.string(),
+  link: z.string().nullable(),
+  sort_order: z.number(),
+  is_active: z.boolean(),
+  created_at: z.string(),
+});
+
 export type TokenPair = z.infer<typeof tokenPairSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Role = User["role"];
@@ -120,3 +129,4 @@ export type BookingStatus = z.infer<typeof bookingStatusEnum>;
 export type Dashboard = z.infer<typeof dashboardSchema>;
 export type Broadcast = z.infer<typeof broadcastSchema>;
 export type BroadcastAudience = z.infer<typeof broadcastAudienceSchema>;
+export type Banner = z.infer<typeof bannerSchema>;

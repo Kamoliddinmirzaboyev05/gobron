@@ -8,6 +8,7 @@ import {
   Megaphone,
   LogOut,
   Wallet,
+  Image,
 } from "lucide-react";
 import { logout } from "../hooks/useAuth";
 
@@ -19,6 +20,7 @@ const links = [
   { to: "/bookings", label: "Bronlar", icon: CalendarCheck, end: false },
   { to: "/broadcasts", label: "E'lonlar", icon: Megaphone, end: false },
   { to: "/payments", label: "To'lovlar", icon: Wallet, end: false },
+  { to: "/banners", label: "Bannerlar", icon: Image, end: false },
 ];
 
 export default function Sidebar() {
