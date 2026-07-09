@@ -1,7 +1,7 @@
 """Data access for Slot — availability queries used by the calendar + booking."""
-from datetime import date, time
+from datetime import date, datetime, time
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import SlotStatus
@@ -36,7 +36,16 @@ class SlotRepository:
         if date_to is not None:
             stmt = stmt.where(Slot.slot_date <= date_to)
         if available_only:
-            stmt = stmt.where(Slot.status == SlotStatus.AVAILABLE)
+            # "Available" has to mean bookable: a slot that already started
+            # today is free in the DB but nobody can book it any more.
+            now = datetime.now()
+            stmt = stmt.where(
+                Slot.status == SlotStatus.AVAILABLE,
+                or_(
+                    Slot.slot_date > now.date(),
+                    and_(Slot.slot_date == now.date(), Slot.start_time > now.time()),
+                ),
+            )
         stmt = stmt.order_by(Slot.slot_date, Slot.start_time)
         return list((await self.db.execute(stmt)).scalars().all())
 

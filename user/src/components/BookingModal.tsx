@@ -36,9 +36,12 @@ export default function BookingModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const days = useMemo(() => nextDays(14), []);
   const [fieldId, setFieldId] = useState(initialFieldId);
-  const [date, setDate] = useState(days[0].iso);
+
+  // Each field's owner decides how far ahead players may book (1 = today only).
+  const windowDays = fields.find((f) => f.id === fieldId)?.booking_window_days ?? 1;
+  const days = useMemo(() => nextDays(Math.max(1, windowDays)), [windowDays]);
+  const [date, setDate] = useState(() => nextDays(1)[0].iso);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [recurrence, setRecurrence] = useState<RecurrenceType>("once");
   const [occurrences, setOccurrences] = useState(4);
@@ -81,6 +84,8 @@ export default function BookingModal({
   function switchField(id: number) {
     setFieldId(id);
     setSelectedIds([]);
+    // The new field may have a shorter window than the currently picked date.
+    setDate(nextDays(1)[0].iso);
   }
 
   function switchDate(iso: string) {

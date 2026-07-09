@@ -228,7 +228,34 @@ async def test_create_field_generates_slots_for_active_field(monkeypatch):
     field = await service.create_field(owner=User(id=9), body=body)
 
     assert len(calls) == 1
-    assert calls[0] == (field, 10)
+    # 10 bookable days *including today* -> 9 days ahead of today.
+    assert calls[0] == (field, 9)
+
+
+@pytest.mark.asyncio
+async def test_single_day_window_generates_today_only(monkeypatch):
+    from app.models.venue import Venue
+    from app.schemas.owner import OwnerFieldIn
+    import app.services.owner_service as owner_service_module
+
+    calls = []
+
+    class FakeSlotService:
+        def __init__(self, db):
+            pass
+
+        async def generate_daily_slots(self, field, days_ahead):
+            calls.append(days_ahead)
+
+    monkeypatch.setattr(owner_service_module, "SlotService", FakeSlotService)
+
+    venue = Venue(id=1, owner_id=9, address=None, latitude=None, longitude=None)
+    service = _make_owner_service(results=[venue])
+    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000", booking_window_days=1)
+
+    await service.create_field(owner=User(id=9), body=body)
+
+    assert calls == [0]  # today only, never a negative range
 
 
 def test_manual_booking_status_binds_lowercase_enum_values():

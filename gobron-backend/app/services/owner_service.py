@@ -95,7 +95,11 @@ class OwnerService:
         # Players book against pre-generated Slot rows, not the field itself -
         # without this, a freshly created field has zero bookable slots until
         # someone with superadmin access finds the manual "generate" button.
-        await SlotService(self.db).generate_daily_slots(field, field.booking_window_days)
+        # booking_window_days counts today, generate_daily_slots counts days
+        # *ahead* of today - so 3 days of availability is +2.
+        await SlotService(self.db).generate_daily_slots(
+            field, max(0, field.booking_window_days - 1)
+        )
         await self.db.commit()
         return field
 
@@ -115,7 +119,11 @@ class OwnerService:
         # ponytail: re-extends the rolling slot window on every save so it
         # self-heals without owner action; a real fix is the daily cron job
         # slot_service.generate_daily_slots's own docstring says should exist.
-        await SlotService(self.db).generate_daily_slots(field, field.booking_window_days)
+        # booking_window_days counts today, generate_daily_slots counts days
+        # *ahead* of today - so 3 days of availability is +2.
+        await SlotService(self.db).generate_daily_slots(
+            field, max(0, field.booking_window_days - 1)
+        )
         await self.db.commit()
         return field
 

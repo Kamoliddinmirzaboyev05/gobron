@@ -66,4 +66,6 @@ class FieldOut(FieldBase):
     id: int
     owner_id: int
     rating: float
+    # How many days ahead the owner lets players book (1 = today only).
+    booking_window_days: int
     created_at: datetime

@@ -42,6 +42,8 @@ export const fieldSchema = z.object({
   peak_start_time: z.string().nullable(),
   peak_price_multiplier: z.coerce.number(),
   is_active: z.boolean(),
+  // Bookable days ahead, counting today. 1 = today only.
+  booking_window_days: z.number(),
 });
 
 export const slotStatus = z.enum(["available", "booked", "blocked"]);
