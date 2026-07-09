@@ -252,7 +252,7 @@ export default function FieldFormPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               multiple
               hidden
               onChange={handleFilesSelected}

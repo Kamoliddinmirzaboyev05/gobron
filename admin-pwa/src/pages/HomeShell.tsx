@@ -4,13 +4,11 @@ import BookingsListPage from './BookingsListPage'
 import FieldsListPage from './FieldsListPage'
 import NotificationsPage from './NotificationsPage'
 import ProfilePage from './ProfilePage'
-import PaymentsPage from './PaymentsPage'
 
 const tabs = [
   { to: 'stats', label: 'Asosiy', icon: DashboardIcon },
   { to: 'bookings', label: 'Bandliklar', icon: CalendarIcon },
   { to: 'fields', label: 'Maydonlar', icon: SoccerIcon },
-  { to: 'payments', label: "To'lov", icon: WalletIcon },
   { to: 'profile', label: 'Profil', icon: SettingsIcon },
 ]
 
@@ -26,7 +24,8 @@ export default function HomeShell() {
           <Route path="fields" element={<FieldsListPage />} />
           {/* Not a bottom-nav tab — reached via the bell icon in each tab's TopBar */}
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
+          {/* To'lov moved into Profil - keep the old link working */}
+          <Route path="payments" element={<Navigate to="../profile" replace />} />
           <Route path="profile" element={<ProfilePage />} />
         </Routes>
       </div>
@@ -114,15 +113,6 @@ function SettingsIcon({ filled }: { filled: boolean }) {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
-    </svg>
-  )
-}
-
-function WalletIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.15 : 0} />
-      <path d="M16 12h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }
