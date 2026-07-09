@@ -72,7 +72,7 @@ export default function FieldDetail() {
                 <button
                   key={sf.id}
                   onClick={() => navigate(`/fields/${sf.id}`, { replace: true })}
-                  className={`w-36 shrink-0 overflow-hidden rounded-xl text-left transition-all ${
+                  className={`w-40 shrink-0 overflow-hidden rounded-xl text-left transition-all ${
                     active
                       ? "ring-2 ring-pitch-600"
                       : "opacity-80 ring-1 ring-gray-200 active:opacity-100"
@@ -92,10 +92,11 @@ export default function FieldDetail() {
                   </div>
                   <div className="p-2">
                     <p className="truncate text-sm font-bold text-gray-900">{sf.name}</p>
-                    <p className="mt-0.5 text-xs font-semibold text-pitch-600">
+                    {/* Two lines: "200 000 so'm/soat" doesn't fit one. */}
+                    <p className="mt-0.5 truncate text-xs font-semibold text-pitch-600">
                       {formatPrice(sf.price_per_slot)}
-                      <span className="font-normal text-gray-400">/{slotUnit(sf.slot_duration)}</span>
                     </p>
+                    <p className="text-[11px] text-gray-400">/ {slotUnit(sf.slot_duration)}</p>
                   </div>
                 </button>
               );
