@@ -2,11 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { fieldSchema, type Field } from "../types";
 
+export type FieldSort = "rating" | "cheapest" | "popular";
+
 export interface FieldFilters {
   search?: string;
   min_price?: number;
   max_price?: number;
   min_rating?: number;
+  available_today?: boolean;
+  sort?: FieldSort;
 }
 
 export function useFields(filters: FieldFilters = {}) {

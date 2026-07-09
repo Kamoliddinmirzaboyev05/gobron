@@ -7,7 +7,7 @@ from app.models.user import User
 from app.core.deps import DBSession, require_role
 from app.models.enums import UserRole
 from app.models.field import Field
-from app.repositories.field_repository import FieldRepository
+from app.repositories.field_repository import FieldRepository, FieldSort
 from app.schemas.field import FieldCreate, FieldOut, FieldUpdate
 
 router = APIRouter(prefix="/fields", tags=["fields"])
@@ -22,6 +22,8 @@ async def list_fields(
     min_price: Decimal | None = None,
     max_price: Decimal | None = None,
     min_rating: float | None = None,
+    available_today: bool = False,
+    sort: FieldSort = "rating",
     limit: int = Query(50, le=100),
     offset: int = 0,
 ):
@@ -30,6 +32,8 @@ async def list_fields(
         min_price=min_price,
         max_price=max_price,
         min_rating=min_rating,
+        available_today=available_today,
+        sort=sort,
         limit=limit,
         offset=offset,
     )
