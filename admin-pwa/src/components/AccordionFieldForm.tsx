@@ -4,6 +4,7 @@ import { uploadImage } from '../api/media'
 import type { Field } from '../types'
 import { extractDigits, formatThousands } from '../utils/number'
 import { extractPhoneDigits, formatUzPhone, toE164, PHONE_DIGITS_LENGTH } from '../utils/phone'
+import { AMENITIES } from '../utils/amenities'
 
 function parseSize(size: string | undefined): [string, string] {
   const match = size?.match(/^(\d+)\s*x\s*(\d+)$/i)
@@ -26,6 +27,16 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
   const [width, setWidth] = useState(initialWidth)
   const [price, setPrice] = useState(existingField?.pricePerHour?.toString() ?? '')
   const [phone, setPhone] = useState(extractPhoneDigits(existingField?.phone ?? ''))
+  const [address, setAddress] = useState(existingField?.address ?? '')
+  const [coords, setCoords] = useState<{ lat?: number; lon?: number }>({
+    lat: existingField?.latitude,
+    lon: existingField?.longitude,
+  })
+  const [locating, setLocating] = useState(false)
+  const [locateError, setLocateError] = useState('')
+  const [openingTime, setOpeningTime] = useState(existingField?.openingTime ?? '08:00')
+  const [closingTime, setClosingTime] = useState(existingField?.closingTime ?? '23:00')
+  const [amenities, setAmenities] = useState<string[]>(existingField?.amenities ?? [])
   const [images, setImages] = useState<string[]>(existingField?.images ?? [])
   const [pendingUploads, setPendingUploads] = useState<{ id: string; progress: number }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -46,6 +57,11 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
       setWidth(w)
       setPrice(existingField.pricePerHour?.toString() ?? '')
       setPhone(extractPhoneDigits(existingField.phone ?? ''))
+      setAddress(existingField.address ?? '')
+      setCoords({ lat: existingField.latitude, lon: existingField.longitude })
+      setOpeningTime(existingField.openingTime ?? '08:00')
+      setClosingTime(existingField.closingTime ?? '23:00')
+      setAmenities(existingField.amenities ?? [])
       setImages(existingField.images || [])
       setSurfaceType(existingField.surfaceType)
       setIsActive(existingField.isActive)
@@ -81,6 +97,35 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
     setImages((prev) => prev.filter((u) => u !== url))
   }
 
+  function toggleAmenity(key: string) {
+    setAmenities((prev) => (prev.includes(key) ? prev.filter((a) => a !== key) : [...prev, key]))
+  }
+
+  /** Native geolocation — no map library, no API key. Needs HTTPS. */
+  function detectLocation() {
+    if (!('geolocation' in navigator)) {
+      setLocateError("Brauzer joylashuvni aniqlay olmaydi")
+      return
+    }
+    setLocating(true)
+    setLocateError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+        setLocating(false)
+      },
+      (err) => {
+        setLocateError(
+          err.code === err.PERMISSION_DENIED
+            ? "Joylashuvga ruxsat berilmadi"
+            : "Joylashuvni aniqlab bo'lmadi",
+        )
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    )
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {}
     if (!name.trim()) e.name = 'Nomini kiriting'
@@ -101,6 +146,12 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
       size: length.trim() && width.trim() ? `${length.trim()}x${width.trim()}` : undefined,
       pricePerHour: Number(price),
       phone: phone ? toE164(phone) : undefined,
+      address: address.trim() || undefined,
+      latitude: coords.lat,
+      longitude: coords.lon,
+      openingTime,
+      closingTime,
+      amenities,
       surfaceType,
       images,
       peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
@@ -236,6 +287,90 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
               Mijozlar maydon sahifasida ko'radi
             </p>
             {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+          </div>
+
+          {/* Address + location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Manzil
+            </label>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Farg'ona shahar, San'at saroyi"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+
+            <button
+              type="button"
+              onClick={detectLocation}
+              disabled={locating}
+              className="mt-2 w-full flex items-center justify-center gap-2 border border-primary text-primary py-2.5 rounded-btn text-sm font-medium disabled:opacity-60"
+            >
+              <PinIcon />
+              {locating ? 'Aniqlanmoqda...' : 'Joylashuvni aniqlash'}
+            </button>
+
+            {coords.lat != null && coords.lon != null && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
+                📍 {coords.lat.toFixed(6)}, {coords.lon.toFixed(6)}
+              </p>
+            )}
+            {locateError && <p className="text-red-500 text-xs mt-1">{locateError}</p>}
+          </div>
+
+          {/* Opening hours */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Ish vaqti
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                className="input-field flex-1"
+                value={openingTime}
+                onChange={(e) => setOpeningTime(e.target.value)}
+              />
+              <span className="text-gray-400">—</span>
+              <input
+                type="time"
+                className="input-field flex-1"
+                value={closingTime}
+                onChange={(e) => setClosingTime(e.target.value)}
+              />
+            </div>
+            {closingTime <= openingTime && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Yarim tundan keyin yopiladi (kechasi ishlaydi)
+              </p>
+            )}
+          </div>
+
+          {/* Amenities */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Qulayliklar
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {AMENITIES.map(({ key, label }) => {
+                const on = amenities.includes(key)
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleAmenity(key)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      on
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Booking window */}
@@ -374,6 +509,15 @@ function EditIcon() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function PinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 21s-7-6-7-11a7 7 0 1 1 14 0c0 5-7 11-7 11z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.8"/>
     </svg>
   )
 }

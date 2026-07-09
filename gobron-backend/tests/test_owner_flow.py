@@ -185,17 +185,25 @@ async def test_create_field_copies_address_and_coordinates_from_venue():
 
 
 @pytest.mark.asyncio
-async def test_update_field_resyncs_address_and_coordinates_from_venue():
+async def test_update_field_takes_address_and_coordinates_from_the_form():
+    """Location is per-field now; editing a field no longer resets it to the
+    venue's address."""
     from app.models.field import Field
-    from app.models.venue import Venue
     from app.schemas.owner import OwnerFieldIn
 
-    field = Field(id=5, owner_id=9, venue_id=1, address=None, latitude=None, longitude=None)
-    venue = Venue(id=1, owner_id=9, address="Samarqand, Registon", latitude=39.65, longitude=66.97)
-    service = _make_owner_service(results=[field, venue])  # _get_owned_field, _get_venue
+    field = Field(id=5, owner_id=9, venue_id=1, address="Eski manzil", latitude=1.0, longitude=2.0)
+    # _get_owned_field, then the prune DELETE that runs before regeneration.
+    service = _make_owner_service(results=[field, None])
     # is_active=False short-circuits generate_daily_slots (tested separately
     # below) so this fake DB doesn't also need to answer slot queries.
-    body = OwnerFieldIn(name="Maydon 1", price_per_hour="100000", is_active=False)
+    body = OwnerFieldIn(
+        name="Maydon 1",
+        price_per_hour="100000",
+        is_active=False,
+        address="Samarqand, Registon",
+        latitude=39.65,
+        longitude=66.97,
+    )
 
     updated = await service.update_field(owner=User(id=9), field_id=5, body=body)
 

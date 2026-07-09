@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, MapPin, Phone, Star } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Navigation, Phone, Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { useField, useFields } from "../hooks/useFields";
-import { formatPrice } from "../lib/format";
+import { formatPrice, shortTime } from "../lib/format";
+import { amenityLabel } from "../lib/amenities";
 import { FieldDetailSkeleton } from "../components/Skeleton";
 import { ErrorBox } from "../components/ui";
 import BookingModal from "../components/BookingModal";
@@ -79,6 +80,42 @@ export default function FieldDetail() {
         )}
         {field.description && (
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{field.description}</p>
+        )}
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+          <span className="flex items-center gap-1">
+            <Clock className="h-4 w-4" />
+            {shortTime(field.opening_time)}–{shortTime(field.closing_time)}
+          </span>
+          <span>{field.surface_type === "covered" ? "Yopiq maydon" : "Ochiq maydon"}</span>
+          {field.size && <span>{field.size} m</span>}
+        </div>
+
+        {field.latitude != null && field.longitude != null && (
+          <a
+            href={`https://maps.google.com/?q=${field.latitude},${field.longitude}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-pitch-600 py-2.5 text-sm font-medium text-pitch-600"
+          >
+            <Navigation className="h-4 w-4" /> Xaritada ochish
+          </a>
+        )}
+
+        {field.amenities.length > 0 && (
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold text-gray-700">Qulayliklar</h2>
+            <div className="flex flex-wrap gap-2">
+              {field.amenities.map((key) => (
+                <span
+                  key={key}
+                  className="rounded-full bg-pitch-50 px-3 py-1.5 text-xs font-medium text-pitch-700"
+                >
+                  {amenityLabel(key)}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
         {siblingFields.length > 1 && (

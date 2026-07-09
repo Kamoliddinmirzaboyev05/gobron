@@ -16,7 +16,7 @@ Design notes:
 """
 from datetime import date, datetime, time, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import SlotStatus
@@ -28,24 +28,31 @@ from app.utils.clock import today_local
 
 def _iter_start_times(
     opening: time, closing: time, duration_minutes: int
-) -> list[tuple[time, time]]:
-    """Yield (start, end) pairs tiling [opening, closing) by ``duration_minutes``.
+) -> list[tuple[time, time, int]]:
+    """Yield (start, end, day_offset) tiling [opening, closing) by ``duration_minutes``.
 
     A partial trailing window that would run past ``closing`` is discarded, so
     every returned slot fits entirely within opening hours.
+
+    ``closing <= opening`` means the pitch shuts after midnight (08:00 -> 01:00).
+    Those late slots belong to the *next* calendar day: ``day_offset`` is 1 for
+    a slot that starts after midnight, so every slot keeps ``start_time`` on the
+    date it is actually played and all the ordering / "has it started yet"
+    comparisons elsewhere stay valid.
     """
-    pairs: list[tuple[time, time]] = []
+    pairs: list[tuple[time, time, int]] = []
     # Use a dummy date to do time arithmetic safely.
     anchor = date(2000, 1, 1)
     cursor = datetime.combine(anchor, opening)
     end_of_day = datetime.combine(anchor, closing)
+    if closing <= opening:
+        end_of_day += timedelta(days=1)
     step = timedelta(minutes=duration_minutes)
 
     while cursor + step <= end_of_day:
-        start = cursor.time()
-        end = (cursor + step).time()
-        pairs.append((start, end))
-        cursor += step
+        end = cursor + step
+        pairs.append((cursor.time(), end.time(), (cursor.date() - anchor).days))
+        cursor = end
     return pairs
 
 
@@ -71,10 +78,11 @@ class SlotService:
 
         # Preload existing (date, start_time) keys to stay idempotent without a
         # round-trip per candidate slot.
+        # +1 day: a session opening on end_date can spill past midnight.
         existing_stmt = select(Slot.slot_date, Slot.start_time).where(
             Slot.field_id == field.id,
             Slot.slot_date >= start_date,
-            Slot.slot_date <= end_date,
+            Slot.slot_date <= end_date + timedelta(days=1),
         )
         existing_rows = (await self.db.execute(existing_stmt)).all()
         existing_keys = {(r.slot_date, r.start_time) for r in existing_rows}
@@ -87,9 +95,12 @@ class SlotService:
         current = start_date
         while current <= end_date:
             # Python weekday(): Monday=0 ... Sunday=6, matching working_days.
+            # The *opening* day decides whether the pitch works, so an
+            # after-midnight slot rides on its opening day's schedule.
             if current.weekday() in field.working_days:
-                for start_t, end_t in time_windows:
-                    if (current, start_t) in existing_keys:
+                for start_t, end_t, day_offset in time_windows:
+                    slot_date = current + timedelta(days=day_offset)
+                    if (slot_date, start_t) in existing_keys:
                         continue
                     price = compute_slot_price(
                         base_price=field.price_per_slot,
@@ -99,7 +110,7 @@ class SlotService:
                     )
                     slot = Slot(
                         field_id=field.id,
-                        slot_date=current,
+                        slot_date=slot_date,
                         start_time=start_t,
                         end_time=end_t,
                         status=SlotStatus.AVAILABLE,
@@ -111,6 +122,21 @@ class SlotService:
 
         await self.db.flush()
         return new_slots
+
+    async def prune_available_slots(self, field: Field, from_date: date) -> None:
+        """Drop still-free slots from ``from_date`` on.
+
+        Called before regenerating so that shrinking a field's opening hours
+        actually removes the slots that now fall outside them. Booked and
+        blocked slots are left alone - someone already has plans for those.
+        """
+        await self.db.execute(
+            delete(Slot).where(
+                Slot.field_id == field.id,
+                Slot.slot_date >= from_date,
+                Slot.status == SlotStatus.AVAILABLE,
+            )
+        )
 
     async def generate_daily_slots(self, field: Field, days_ahead: int = 14) -> list[Slot]:
         """Generate a rolling window of slots starting today.

@@ -43,6 +43,9 @@ class Field(Base):
     # Comma/array of image URLs for the gallery.
     images: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     rating: Mapped[float] = mapped_column(default=0.0)
+    # Facility keys the owner ticks: parking, shower, changing_room, ...
+    # See app.utils.amenities for the canonical list.
+    amenities: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
 
     # --- Scheduling configuration (drives the slot engine) ---
     opening_time: Mapped[time] = mapped_column(Time, nullable=False, default=time(8, 0))

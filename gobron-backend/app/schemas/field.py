@@ -13,6 +13,9 @@ class FieldBase(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     images: list[str] = []
+    amenities: list[str] = []
+    surface_type: str = "open"
+    size: str | None = None
 
     opening_time: time = time(8, 0)
     closing_time: time = time(23, 0)

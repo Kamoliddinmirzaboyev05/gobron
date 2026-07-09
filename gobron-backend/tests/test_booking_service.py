@@ -85,6 +85,25 @@ def test_back_to_back_slots_are_contiguous_in_any_input_order():
     assert [s.start_time for s in result] == [time(11, 0), time(12, 0), time(13, 0)]
 
 
+def test_a_block_crossing_midnight_is_contiguous():
+    """23:00-00:00 tonight runs straight into 00:00-01:00 tomorrow."""
+    service = _service()
+    late = _slot("23:00", "00:00", id=1, day=date(2026, 7, 9))
+    early = _slot("00:00", "01:00", id=2, day=date(2026, 7, 10))
+
+    result = service._contiguous_slots([early, late])
+
+    assert [s.id for s in result] == [1, 2]
+
+
+def test_same_clock_times_on_the_wrong_days_are_rejected():
+    service = _service()
+    late = _slot("23:00", "00:00", day=date(2026, 7, 9))
+    early = _slot("00:00", "01:00", day=date(2026, 7, 12))
+    with pytest.raises(SlotUnavailableError):
+        service._contiguous_slots([late, early])
+
+
 def test_gap_between_slots_is_rejected():
     service = _service()
     with pytest.raises(SlotUnavailableError):

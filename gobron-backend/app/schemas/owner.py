@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import ManualBookingStatus
+from app.utils.amenities import validate as validate_amenities
 
 
 class VenueIn(BaseModel):
@@ -38,12 +39,24 @@ class OwnerFieldIn(BaseModel):
     name: str = Field(..., max_length=150)
     size: str | None = Field(None, max_length=40)
     phone: str | None = Field(None, max_length=20)
+    address: str | None = Field(None, max_length=255)
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
     surface_type: str = Field("open", pattern="^(open|covered)$")
+    amenities: list[str] = []
     price_per_hour: Decimal
     images: list[str] = []
     is_active: bool = True
+    # closing <= opening means the pitch shuts after midnight (08:00 -> 01:00).
+    opening_time: time = time(8, 0)
+    closing_time: time = time(23, 0)
     # How many days ahead (including today) the manual-booking picker opens.
     booking_window_days: int = Field(3, ge=1, le=30)
+
+    @field_validator("amenities")
+    @classmethod
+    def _known_amenities(cls, value: list[str]) -> list[str]:
+        return validate_amenities(value)
 
 
 class OwnerFieldOut(OwnerFieldIn):

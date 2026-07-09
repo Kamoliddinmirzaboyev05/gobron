@@ -81,15 +81,18 @@ class OwnerService:
             size=body.size,
             phone=body.phone,
             surface_type=body.surface_type,
+            amenities=body.amenities,
             price_per_hour=body.price_per_hour,
             price_per_slot=body.price_per_hour,
             images=body.images,
-            opening_time=venue.opening_time,
-            closing_time=venue.closing_time,
+            # Hours and location are per-field now; the venue only seeds the
+            # working_days calendar, which has no per-field UI.
+            opening_time=body.opening_time,
+            closing_time=body.closing_time,
             working_days=venue.working_days,
-            address=venue.address,
-            latitude=venue.latitude,
-            longitude=venue.longitude,
+            address=body.address or venue.address,
+            latitude=body.latitude if body.latitude is not None else venue.latitude,
+            longitude=body.longitude if body.longitude is not None else venue.longitude,
             is_active=body.is_active,
             booking_window_days=body.booking_window_days,
         )
@@ -111,23 +114,20 @@ class OwnerService:
         self, owner: User, field_id: int, body: OwnerFieldIn
     ) -> Field:
         field = await self._get_owned_field(owner, field_id)
-        venue = await self.get_or_create_venue(owner)
         for key, value in body.model_dump().items():
             setattr(field, key, value)
         field.price_per_slot = body.price_per_hour
-        field.address = venue.address
-        field.latitude = venue.latitude
-        field.longitude = venue.longitude
         await self.db.commit()
         await self.db.refresh(field)
         # ponytail: re-extends the rolling slot window on every save so it
         # self-heals without owner action; a real fix is the daily cron job
         # slot_service.generate_daily_slots's own docstring says should exist.
-        # booking_window_days counts today, generate_daily_slots counts days
-        # *ahead* of today - so 3 days of availability is +2.
-        await SlotService(self.db).generate_daily_slots(
-            field, max(0, field.booking_window_days - 1)
-        )
+        # Prune first: opening hours may have shrunk, leaving free slots that
+        # now sit outside them. booking_window_days counts today,
+        # generate_daily_slots counts days *ahead* of today - so 3 days is +2.
+        slots = SlotService(self.db)
+        await slots.prune_available_slots(field, today_local())
+        await slots.generate_daily_slots(field, max(0, field.booking_window_days - 1))
         await self.db.commit()
         return field
 

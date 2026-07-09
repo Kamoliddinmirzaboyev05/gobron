@@ -27,6 +27,9 @@ export interface Field {
   pricePerSlot?: number
   size?: string
   phone?: string
+  latitude?: number
+  longitude?: number
+  amenities?: string[]
   surfaceType: 'open' | 'covered'
   images: string[]
   peakStartTime?: string

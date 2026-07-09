@@ -39,7 +39,13 @@ class BookingRepository:
             .where(
                 or_(
                     Slot.slot_date < now.date(),
-                    and_(Slot.slot_date == now.date(), Slot.end_time <= now.time()),
+                    and_(
+                        Slot.slot_date == now.date(),
+                        Slot.end_time <= now.time(),
+                        # A 23:00-00:00 slot ends *tomorrow*; without this its
+                        # 00:00 end reads as "already over" from 00:01 onwards.
+                        Slot.end_time > Slot.start_time,
+                    ),
                 )
             )
             .scalar_subquery()

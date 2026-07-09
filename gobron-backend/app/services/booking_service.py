@@ -18,7 +18,7 @@ like 11:00-12:00 + 15:00-16:00 - contiguity is enforced in _contiguous_slots.
 They share a group_id the same way recurrence occurrences do.
 """
 import uuid
-from datetime import timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
@@ -62,17 +62,20 @@ class BookingService:
         return result
 
     def _contiguous_slots(self, slots: list[Slot]) -> list[Slot]:
-        """Order slots by start_time and verify they form one unbroken block
-        on the same field/date (each slot's end_time is the next one's start).
+        """Order the slots chronologically and verify they form one unbroken
+        block on the same field (each slot's end_time is the next one's start).
+
+        A late-night session crosses midnight, so 23:00-00:00 on day D is
+        followed by 00:00-01:00 on day D+1. That's still one continuous block.
         """
-        ordered = sorted(slots, key=lambda s: s.start_time)
+        ordered = sorted(slots, key=lambda s: (s.slot_date, s.start_time))
         for prev, nxt in zip(ordered, ordered[1:]):
-            if (
-                prev.field_id != nxt.field_id
-                or prev.slot_date != nxt.slot_date
-                or prev.end_time != nxt.start_time
-            ):
-                raise SlotUnavailableError("Slots must be back-to-back on the same field/date")
+            if prev.field_id != nxt.field_id or prev.end_time != nxt.start_time:
+                raise SlotUnavailableError("Slots must be back-to-back on the same field")
+            crosses_midnight = prev.end_time == time(0, 0)
+            expected_date = prev.slot_date + timedelta(days=1) if crosses_midnight else prev.slot_date
+            if nxt.slot_date != expected_date:
+                raise SlotUnavailableError("Slots must be back-to-back on the same field")
         return ordered
 
     async def create_booking(
