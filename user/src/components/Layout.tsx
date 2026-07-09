@@ -15,7 +15,7 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 mx-auto flex max-w-md justify-around border-t border-gray-200 bg-white/95 backdrop-blur">
+      <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md justify-around border-t border-gray-200 bg-white/95 backdrop-blur">
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}

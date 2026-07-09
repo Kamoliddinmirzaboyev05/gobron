@@ -5,7 +5,8 @@ import { X, Check } from "lucide-react";
 import { useSlots } from "../hooks/useSlots";
 import { useCreateBooking } from "../hooks/useBookings";
 import { formatPrice, nextDays, shortTime } from "../lib/format";
-import { Empty, Spinner } from "./ui";
+import { SlotGridSkeleton } from "./Skeleton";
+import { Empty } from "./ui";
 import type { Field, RecurrenceType, Slot } from "../types";
 
 const RECURRENCE: { value: RecurrenceType; label: string }[] = [
@@ -153,7 +154,7 @@ export default function BookingModal({
 
           <h3 className="mb-2 text-sm font-semibold text-gray-700">Vaqt</h3>
           {isLoading ? (
-            <Spinner />
+            <SlotGridSkeleton />
           ) : slots && slots.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {slots.map((s) => (

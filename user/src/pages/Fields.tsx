@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useFields, type FieldFilters, type FieldSort } from "../hooks/useFields";
 import FieldCard from "../components/FieldCard";
-import { Empty, ErrorBox, Spinner } from "../components/ui";
+import { FieldListSkeleton } from "../components/Skeleton";
+import { Empty, ErrorBox } from "../components/ui";
 
 const SORTS: { value: FieldSort; label: string }[] = [
   { value: "rating", label: "Tavsiya etiladi" },
@@ -122,7 +123,7 @@ export default function Fields() {
 
       <div className="mt-4">
         {isLoading ? (
-          <Spinner />
+          <FieldListSkeleton count={4} />
         ) : error ? (
           <ErrorBox message="Maydonlarni yuklab bo'lmadi." />
         ) : uniqueFields.length > 0 ? (

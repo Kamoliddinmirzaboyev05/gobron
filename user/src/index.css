@@ -20,6 +20,16 @@ body {
   @apply bg-gray-50 text-gray-900 antialiased;
 }
 
+/* A swiper-slide has no intrinsic height, so an `h-full` <img> inside one
+   resolves to the image's natural height and escapes its fixed-height card.
+   Pin the whole chain to the wrapper's height instead. */
+.hero-swiper .swiper-wrapper,
+.hero-swiper .swiper-slide,
+.field-card-swiper .swiper-wrapper,
+.field-card-swiper .swiper-slide {
+  height: 100%;
+}
+
 /* Swiper pagination bullets read poorly on photos with the library default
    (dark gray on light) - brighten them for the image-carousel use cases. */
 .hero-swiper .swiper-pagination-bullet,

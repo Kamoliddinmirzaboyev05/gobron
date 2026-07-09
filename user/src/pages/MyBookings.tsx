@@ -1,5 +1,6 @@
 import { useMyBookings, useCancelBooking } from "../hooks/useBookings";
-import { Empty, Spinner } from "../components/ui";
+import { BookingListSkeleton } from "../components/Skeleton";
+import { Empty } from "../components/ui";
 import { formatPrice, shortTime } from "../lib/format";
 import type { Booking } from "../types";
 
@@ -21,7 +22,13 @@ export default function MyBookings() {
   const { data, isLoading } = useMyBookings();
   const cancel = useCancelBooking();
 
-  if (isLoading) return <Spinner />;
+  if (isLoading)
+    return (
+      <div className="px-4 py-4">
+        <h1 className="mb-4 text-lg font-semibold">Mening bronlarim</h1>
+        <BookingListSkeleton />
+      </div>
+    );
   if (!data || data.length === 0) return <Empty>Sizda hali bron yo'q</Empty>;
 
   return (

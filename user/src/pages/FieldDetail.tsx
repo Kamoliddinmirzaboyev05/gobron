@@ -7,7 +7,8 @@ import "swiper/css";
 import "swiper/css/pagination";
 import { useField, useFields } from "../hooks/useFields";
 import { formatPrice } from "../lib/format";
-import { ErrorBox, Spinner } from "../components/ui";
+import { FieldDetailSkeleton } from "../components/Skeleton";
+import { ErrorBox } from "../components/ui";
 import BookingModal from "../components/BookingModal";
 
 export default function FieldDetail() {
@@ -23,7 +24,7 @@ export default function FieldDetail() {
     return allFields.filter((f) => f.owner_id === field.owner_id);
   }, [field, allFields]);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) return <FieldDetailSkeleton />;
   if (error || !field) return <ErrorBox message="Maydon topilmadi." />;
 
   return (
@@ -70,7 +71,7 @@ export default function FieldDetail() {
       </div>
 
       {/* Sticky booking bar */}
-      <div className="fixed inset-x-0 bottom-16 mx-auto max-w-md border-t border-gray-200 bg-white p-4">
+      <div className="fixed inset-x-0 bottom-16 z-40 mx-auto max-w-md border-t border-gray-200 bg-white p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-400">Narxi</p>

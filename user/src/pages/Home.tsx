@@ -8,7 +8,8 @@ import "swiper/css/pagination";
 import { useFields } from "../hooks/useFields";
 import { useBanners } from "../hooks/useBanners";
 import FieldCard from "../components/FieldCard";
-import { ErrorBox, Spinner } from "../components/ui";
+import { FieldListSkeleton } from "../components/Skeleton";
+import { ErrorBox } from "../components/ui";
 
 export default function Home() {
   const [q, setQ] = useState("");
@@ -34,46 +35,51 @@ export default function Home() {
     <div className="pb-20">
       {/* Hero */}
       {banners && banners.length > 0 ? (
-        <Swiper
-          modules={[Autoplay, Pagination]}
-          autoplay={{ delay: 4000, disableOnInteraction: false }}
-          pagination={{ clickable: true }}
-          loop={banners.length > 1}
-          className="hero-swiper"
-        >
-          {banners.map((b) => (
-            <SwiperSlide key={b.id}>
-              {b.link ? (
-                <a href={b.link} target="_blank" rel="noreferrer">
-                  <img src={b.image_url} alt="" className="h-48 w-full object-cover" />
-                </a>
-              ) : (
-                <img src={b.image_url} alt="" className="h-48 w-full object-cover" />
-              )}
-            </SwiperSlide>
-          ))}
-        </Swiper>
+        <section className="h-52 overflow-hidden rounded-b-3xl">
+          <Swiper
+            modules={[Autoplay, Pagination]}
+            autoplay={{ delay: 4000, disableOnInteraction: false }}
+            pagination={{ clickable: true }}
+            loop={banners.length > 1}
+            className="hero-swiper h-full"
+          >
+            {banners.map((b) => (
+              <SwiperSlide key={b.id}>
+                {b.link ? (
+                  <a href={b.link} target="_blank" rel="noreferrer" className="block h-full">
+                    <img src={b.image_url} alt="" className="h-full w-full object-cover" />
+                  </a>
+                ) : (
+                  <img src={b.image_url} alt="" className="h-full w-full object-cover" />
+                )}
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </section>
       ) : (
-        <section className="relative overflow-hidden bg-gradient-to-br from-pitch-700 via-pitch-600 to-pitch-800 px-5 pb-8 pt-16 text-white shadow-md">
-          <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-20 -right-10 h-56 w-56 rounded-full bg-emerald-400/20 blur-3xl" />
+        <section className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-pitch-700 via-pitch-600 to-emerald-500 px-5 pb-14 pt-14 text-white">
+          <div className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -bottom-24 -right-12 h-60 w-60 rounded-full bg-emerald-300/25 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.14),transparent_60%)]" />
           <div className="relative z-10">
-            <span className="mb-2 inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-md border border-white/10">
+            <span className="inline-flex items-center rounded-full border border-white/15 bg-white/15 px-3 py-1 text-xs font-medium tracking-wide backdrop-blur-md">
               Yangi avlod bron tizimi 🚀
             </span>
-            <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight drop-shadow">
-              Eng yaxshi maydonlar <br /> sizning qo'lingizda
+            <h1 className="mt-3 text-[2rem] font-extrabold leading-[1.15] tracking-tight">
+              Eng yaxshi maydonlar
+              <br />
+              <span className="text-emerald-100">sizning qo'lingizda</span>
             </h1>
-            <p className="mt-3 text-sm text-pitch-100 font-medium max-w-[280px]">
+            <p className="mt-3 max-w-[280px] text-sm font-medium text-emerald-50/90">
               O'zingizga yaqin va qulay maydonlarni toping va tezkor so'rov yuboring.
             </p>
           </div>
         </section>
       )}
 
-      {/* Search */}
-      <section className="px-5 pt-5">
-        <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-xl bg-white p-1.5 shadow-md ring-1 ring-gray-100 transform transition-all focus-within:scale-[1.02]">
+      {/* Search — floats over the hero's bottom edge */}
+      <section className="relative z-20 -mt-7 px-5">
+        <form onSubmit={submitSearch} className="flex items-center gap-2 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-gray-100 transform transition-all focus-within:scale-[1.02]">
           <Search className="ml-3 h-5 w-5 text-gray-400" />
           <input
             value={q}
@@ -88,11 +94,11 @@ export default function Home() {
       </section>
 
       {/* Popular fields */}
-      <section className="px-5 py-8">
+      <section className="px-5 pb-8 pt-6">
         <div className="mb-5 flex items-end justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">Tavsiya etiladi</h2>
-            <p className="text-sm text-gray-500 font-medium">Eng yuqori baholangan maydonlar</p>
+            <p className="text-sm text-gray-500 font-medium">Siz uchun tanlangan maydonlar</p>
           </div>
           <button onClick={() => navigate('/fields')} className="text-sm font-semibold text-pitch-600 active:text-pitch-700">
             Barchasi
@@ -100,7 +106,7 @@ export default function Home() {
         </div>
         
         {isLoading ? (
-          <div className="flex justify-center py-10"><Spinner /></div>
+          <FieldListSkeleton count={3} />
         ) : error ? (
           <ErrorBox message="Maydonlarni yuklab bo'lmadi." />
         ) : (
