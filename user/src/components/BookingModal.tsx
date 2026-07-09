@@ -37,6 +37,7 @@ export default function BookingModal({
 }) {
   const navigate = useNavigate();
   const ref = useRef<HTMLDialogElement>(null);
+  const [closing, setClosing] = useState(false);
   const [fieldId, setFieldId] = useState(initialFieldId);
 
   // showModal() (not the `open` attribute) is what puts the sheet in the top
@@ -44,6 +45,10 @@ export default function BookingModal({
   useEffect(() => {
     ref.current?.showModal();
   }, []);
+
+  // Never dialog.close() directly: that unmounts us before the sheet has slid
+  // out. Play the exit first, and let animationend do the unmounting.
+  const dismiss = () => setClosing(true);
 
   // Each field's owner decides how far ahead players may book (1 = today only).
   const windowDays = fields.find((f) => f.id === fieldId)?.booking_window_days ?? 1;
@@ -119,16 +124,29 @@ export default function BookingModal({
   return (
     <dialog
       ref={ref}
-      // Esc and dialog.close() both land here, so unmounting has one path.
-      onClose={onClose}
+      // Esc would close the dialog outright; intercept it so it exits like a tap.
+      onCancel={(e) => {
+        e.preventDefault();
+        dismiss();
+      }}
       // The dialog box fills the viewport, so a tap outside the sheet targets it.
-      onClick={(e) => e.target === ref.current && ref.current.close()}
-      className="fixed inset-0 m-0 hidden h-full max-h-none w-full max-w-none items-end justify-center overflow-hidden bg-transparent p-0 backdrop:animate-fade-in backdrop:bg-black/40 open:flex"
+      onClick={(e) => e.target === ref.current && dismiss()}
+      className={`fixed inset-0 m-0 hidden h-full max-h-none w-full max-w-none items-end justify-center overflow-hidden bg-transparent p-0 backdrop:bg-black/40 open:flex ${
+        closing ? "backdrop:animate-fade-out" : "backdrop:animate-fade-in"
+      }`}
     >
-      <div className="max-h-[85vh] w-full max-w-md animate-sheet-in overflow-y-auto rounded-t-2xl bg-white">
+      <div
+        // Bound only while closing, so the entrance animation ending can't
+        // unmount the sheet the moment it finishes opening. The target check
+        // ignores animations bubbling up from children.
+        onAnimationEnd={closing ? (e) => e.target === e.currentTarget && onClose() : undefined}
+        className={`max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white ${
+          closing ? "animate-sheet-out" : "animate-sheet-in"
+        }`}
+      >
         <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
           <h2 className="text-lg font-bold">Band qilish</h2>
-          <button onClick={() => ref.current?.close()} className="text-gray-400">
+          <button onClick={dismiss} className="text-gray-400">
             <X className="h-5 w-5" />
           </button>
         </div>

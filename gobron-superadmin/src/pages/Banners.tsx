@@ -10,6 +10,7 @@ export default function Banners() {
   const del = useDeleteBanner();
   const [imageUrl, setImageUrl] = useState("");
   const [link, setLink] = useState("");
+  const [sortOrder, setSortOrder] = useState("0");
   const [uploading, setUploading] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -27,8 +28,8 @@ export default function Banners() {
     e.preventDefault();
     if (!imageUrl) return;
     create.mutate(
-      { image_url: imageUrl, link: link.trim() || null },
-      { onSuccess: () => { setImageUrl(""); setLink(""); } },
+      { image_url: imageUrl, link: link.trim() || null, sort_order: Number(sortOrder) || 0 },
+      { onSuccess: () => { setImageUrl(""); setLink(""); setSortOrder("0"); } },
     );
   }
 
@@ -55,12 +56,23 @@ export default function Banners() {
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
           </label>
         )}
-        <input
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          placeholder="Havola (ixtiyoriy)"
-          className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-        />
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <input
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="Havola (ixtiyoriy)"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          />
+          <label className="flex items-center gap-2 text-xs text-gray-500">
+            Tartib
+            <input
+              type="number"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="w-20 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+            />
+          </label>
+        </div>
         <button
           disabled={create.isPending || uploading || !imageUrl}
           className="mt-3 flex items-center gap-2 rounded-lg bg-pitch-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
@@ -77,8 +89,11 @@ export default function Banners() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {data.map((b) => (
-            <div key={b.id} className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+            <div key={b.id} className="relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
               <img src={b.image_url} alt="" className="h-28 w-full object-cover" />
+              <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white">
+                #{b.sort_order}
+              </span>
               <div className="flex items-center justify-between p-2.5">
                 <p className="truncate text-xs text-gray-500">{b.link || "Havolasiz"}</p>
                 <button

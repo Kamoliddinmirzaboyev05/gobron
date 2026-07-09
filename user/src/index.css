@@ -14,6 +14,12 @@
   --animate-sheet-in: sheet-in 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   --animate-fade-in: fade-in 0.35s ease-out;
 
+  /* Exit is quicker than entrance (dismissal should feel immediate) and holds
+     its last frame - BookingModal unmounts on animationend, and without
+     `forwards` the sheet snaps back into view for the frame in between. */
+  --animate-sheet-out: sheet-out 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+  --animate-fade-out: fade-out 0.25s ease-in forwards;
+
   @keyframes sheet-in {
     from {
       transform: translateY(100%);
@@ -24,8 +30,20 @@
       opacity: 0;
     }
   }
+  @keyframes sheet-out {
+    to {
+      transform: translateY(100%);
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
 }
 
+/* Collapse the duration rather than `animation: none` - BookingModal waits for
+   animationend to unmount, and a suppressed animation never fires it. */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::backdrop {

@@ -11,6 +11,7 @@ import { formatUzPhone, extractPhoneDigits } from '../utils/phone'
 import { SoccerIcon } from '../components/BrandIcons'
 import TopBar from '../components/TopBar'
 import { uploadImage } from '../api/media'
+import { fetchPaymentSettings, type PaymentSettings } from '../api/paymentSettings'
 import { createSubscriptionPayment, fetchSubscriptionPayments, type SubscriptionPayment } from '../api/subscription'
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
@@ -24,6 +25,7 @@ export default function ProfilePage() {
 
   const { data: profile } = useLoad<OwnerProfile>(() => fetchMe(), [])
   const { data: fields } = useLoad<Field[]>(() => fetchFields(), [])
+  const { data: paymentSettings } = useLoad<PaymentSettings>(() => fetchPaymentSettings(), [])
   const monthlyPrice = fields?.[0]?.pricePerHour ?? 0
   const subscription = profile ? getSubscriptionStatus(profile.createdAt) : null
 
@@ -140,17 +142,22 @@ export default function ProfilePage() {
         )}
 
         {/* Payment */}
-        <div className="card p-5 bg-primary text-white">
-          <h2 className="font-semibold mb-2">Tizim to'lovi uchun rekvizitlar</h2>
-          <p className="text-sm opacity-90 mb-4">
-            Quyidagi karta raqamiga to'lov qiling va chek skrinshotini yuklang.
-          </p>
-          <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/20">
-            <p className="text-xs opacity-80 uppercase tracking-wider mb-1">Karta raqami</p>
-            <p className="text-xl tracking-[0.2em] font-mono">8600 1234 5678 9012</p>
-            <p className="text-sm mt-1">Hasanboy To'ychiyev</p>
+        {paymentSettings?.card_number && (
+          <div className="card p-5 bg-primary text-white">
+            <h2 className="font-semibold mb-2">Tizim to'lovi uchun rekvizitlar</h2>
+            <p className="text-sm opacity-90 mb-4">
+              Quyidagi karta raqamiga to'lov qiling va chek skrinshotini yuklang.
+            </p>
+            <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/20">
+              <p className="text-xs opacity-80 uppercase tracking-wider mb-1">Karta raqami</p>
+              <p className="text-xl tracking-[0.2em] font-mono">{paymentSettings.card_number}</p>
+              <p className="text-sm mt-1">{paymentSettings.card_holder}</p>
+              {paymentSettings.bank_name && (
+                <p className="text-xs opacity-80 mt-0.5">{paymentSettings.bank_name}</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="card p-4">
           <h2 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">To'lovni tasdiqlash</h2>

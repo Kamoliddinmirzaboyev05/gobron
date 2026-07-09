@@ -9,6 +9,7 @@ from app.models.field import Field
 from app.models.field_owner import FieldOwner
 from app.models.manual_booking import ManualBooking
 from app.models.payment import Payment
+from app.models.payment_settings import PaymentSettings
 from app.models.push_subscription import PushSubscription
 from app.models.review import Review
 from app.models.slot import Slot
@@ -27,6 +28,7 @@ __all__ = [
     "Slot",
     "Booking",
     "Payment",
+    "PaymentSettings",
     "Broadcast",
     "PushSubscription",
     "Review",

@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  Guards the BookingModal sheet against the fixed bottom nav swallowing its
+  confirm button. Neither tsc nor a render test catches this - it is pure
+  stacking + geometry, so it needs a real engine.
+
+    npm run check:sheet          # exits 1 if the CTA is not tappable
+
+  The runner builds the app, substitutes __CSS__ with the hashed stylesheet and
+  serves dist/. Append ?old=1 to render the pre-fix markup; that arm must FAIL,
+  otherwise the check has stopped reproducing the bug and is worthless.
+-->
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="__CSS__" />
+  </head>
+  <body>
+    <!-- DOM order mirrors Layout.tsx exactly: <main> (which hosts the modal) then <nav>. -->
+    <div class="mx-auto flex min-h-full max-w-md flex-col bg-gray-50">
+      <main class="flex-1 pb-20"><div id="host"></div></main>
+      <nav
+        id="nav"
+        class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md justify-around border-t border-gray-200 bg-white/95 backdrop-blur"
+      >
+        <!-- the <span> stands in for lucide's <Icon className="h-5 w-5" />; without it the nav is ~20px short and the bug hides -->
+        <a class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs"><span class="block h-5 w-5"></span>Asosiy</a>
+        <a class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs"><span class="block h-5 w-5"></span>Maydonlar</a>
+        <a class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs"><span class="block h-5 w-5"></span>Bronlar</a>
+        <a class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs"><span class="block h-5 w-5"></span>Profil</a>
+      </nav>
+    </div>
+
+    <script>
+      const SHEET = `
+        <div id="sheet" class="max-h-[85vh] w-full max-w-md animate-sheet-in overflow-y-auto rounded-t-2xl bg-white">
+          <div class="px-5 py-4" style="height:1200px">tall content</div>
+          <div class="sticky bottom-0 border-t border-gray-200 bg-white p-4">
+            <div class="flex items-center justify-between">
+              <p class="text-lg font-bold text-pitch-600">120 000</p>
+              <button id="cta" class="rounded-lg bg-pitch-600 px-6 py-3 font-semibold text-white">So'rov yuborish</button>
+            </div>
+          </div>
+        </div>`
+
+      const isOld = new URLSearchParams(location.search).has('old')
+      const host = document.getElementById('host')
+
+      if (isOld) {
+        // BookingModal.tsx before the fix.
+        host.innerHTML = `<div id="dlg" class="fixed inset-0 z-50 flex items-end justify-center bg-black/40">${SHEET}</div>`
+      } else {
+        host.innerHTML = `<dialog id="dlg" class="fixed inset-0 m-0 hidden h-full max-h-none w-full max-w-none items-end justify-center overflow-hidden bg-transparent p-0 backdrop:animate-fade-in backdrop:bg-black/40 open:flex">${SHEET}</dialog>`
+      }
+
+      const dlg = document.getElementById('dlg')
+      const cta = document.getElementById('cta')
+      const sheet = document.getElementById('sheet')
+      if (!isOld) dlg.showModal()
+
+      {
+        const out = []
+
+        // Assert the animation is wired, then jump it to its end state. Measuring
+        // mid-translate would make every rect below a lie.
+        const anim = getComputedStyle(sheet).animationName
+        const dur = getComputedStyle(sheet).animationDuration
+        out.push(['sheet has the entrance animation', anim === 'sheet-in' && dur === '0.35s', anim + ' ' + dur])
+        sheet.getAnimations().forEach((a) => a.finish())
+
+        const r = cta.getBoundingClientRect()
+        const cx = r.left + r.width / 2
+        const cy = r.top + r.height / 2
+
+        out.push(['CTA sits inside the viewport', cy > 0 && cy < window.innerHeight, `cy=${Math.round(cy)} innerH=${window.innerHeight}`])
+
+        const hit = document.elementFromPoint(cx, cy)
+        const desc = hit ? hit.tagName + (hit.id ? '#' + hit.id : '') : 'null'
+        const coveredByNav = !!(hit && hit.closest('#nav'))
+        out.push(['tapping the CTA hits the CTA', hit === cta, desc])
+        out.push(['CTA is not covered by the bottom nav', !coveredByNav, coveredByNav ? 'COVERED BY NAV' : 'clear'])
+
+        const above = document.elementFromPoint(window.innerWidth / 2, 20)
+        out.push(['tap above the sheet targets the overlay', above === dlg, above ? above.tagName + '#' + above.id : 'null'])
+
+        // BookingModal unmounts on the exit animation's animationend. If that
+        // animation is missing or infinite the event never fires and the sheet
+        // can never be closed, so assert it is real and finite.
+        sheet.className = sheet.className.replace('animate-sheet-in', 'animate-sheet-out')
+        const cs = getComputedStyle(sheet)
+        const exit = sheet.getAnimations()[0]
+        const timing = exit && exit.effect.getComputedTiming()
+        out.push([
+          'exit animation is real, finite and holds its last frame',
+          cs.animationName === 'sheet-out' && cs.animationFillMode === 'forwards' && !!timing && timing.iterations === 1 && timing.activeDuration > 0,
+          `${cs.animationName} fill=${cs.animationFillMode} iterations=${timing ? timing.iterations : '-'} dur=${timing ? timing.activeDuration : '-'}`,
+        ])
+
+        const pass = out.every((x) => x[1])
+        const pre = document.createElement('pre')
+        pre.id = 'ztest-out'
+        pre.textContent =
+          `ZTEST[${isOld ? 'OLD div z-50' : 'NEW dialog'}] ` + (pass ? 'ALL PASS' : 'FAILED') + '\n' +
+          out.map((x) => (x[1] ? 'ok   ' : 'FAIL ') + x[0] + (x[2] !== undefined ? '  -> ' + x[2] : '')).join('\n')
+        document.body.appendChild(pre)
+      }
+    </script>
+  </body>
+</html>

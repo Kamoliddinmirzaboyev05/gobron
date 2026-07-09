@@ -1,11 +1,93 @@
-import { useState } from 'react'
-import { Check, X, Eye } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Check, X, Eye, CreditCard } from 'lucide-react'
 import {
   useSubscriptionPayments,
   useApproveSubscriptionPayment,
   useRejectSubscriptionPayment,
 } from '../hooks/useSubscriptionPayments'
+import { usePaymentSettings, useSavePaymentSettings } from '../hooks/usePaymentSettings'
 import { Badge, Spinner, Empty } from '../components/ui'
+
+/** The card owners send their subscription fee to. Shown read-only in admin-pwa. */
+function CardSettings() {
+  const { data: settings } = usePaymentSettings()
+  const save = useSavePaymentSettings()
+  const [cardNumber, setCardNumber] = useState('')
+  const [cardHolder, setCardHolder] = useState('')
+  const [bankName, setBankName] = useState('')
+
+  useEffect(() => {
+    if (!settings) return
+    setCardNumber(settings.card_number)
+    setCardHolder(settings.card_holder)
+    setBankName(settings.bank_name ?? '')
+  }, [settings])
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault()
+    save.mutate({
+      card_number: cardNumber,
+      card_holder: cardHolder,
+      bank_name: bankName.trim() || null,
+    })
+  }
+
+  return (
+    <form onSubmit={submit} className="mb-8 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+      <div className="mb-4 flex items-center gap-2">
+        <CreditCard className="h-5 w-5 text-pitch-600" />
+        <h2 className="font-semibold">To'lov kartasi</h2>
+      </div>
+      <p className="mb-4 text-sm text-gray-500">
+        Maydon egalari obuna to'lovini shu kartaga yuboradi.
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs text-gray-500">
+          Karta raqami
+          <input
+            value={cardNumber}
+            onChange={(e) => setCardNumber(e.target.value)}
+            inputMode="numeric"
+            placeholder="8600 0000 0000 0000"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm text-gray-900"
+          />
+        </label>
+        <label className="text-xs text-gray-500">
+          Karta egasi
+          <input
+            value={cardHolder}
+            onChange={(e) => setCardHolder(e.target.value)}
+            placeholder="Ism Familiya"
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+          />
+        </label>
+        <label className="text-xs text-gray-500 sm:col-span-2">
+          Bank nomi (ixtiyoriy)
+          <input
+            value={bankName}
+            onChange={(e) => setBankName(e.target.value)}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
+          />
+        </label>
+      </div>
+
+      {save.isError && (
+        <p className="mt-3 text-sm text-red-600">
+          Saqlab bo'lmadi. Karta raqami 16-20 ta raqamdan iborat bo'lishi kerak.
+        </p>
+      )}
+      {save.isSuccess && <p className="mt-3 text-sm text-pitch-600">Saqlandi ✅</p>}
+
+      <button
+        disabled={save.isPending || !cardNumber || !cardHolder}
+        className="mt-4 rounded-lg bg-pitch-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {save.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
+      </button>
+    </form>
+  )
+}
 
 export default function Payments() {
   const { data: payments, isLoading } = useSubscriptionPayments()
@@ -18,6 +100,8 @@ export default function Payments() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">To'lovlar</h1>
       </div>
+
+      <CardSettings />
 
       {isLoading ? (
         <Spinner />
