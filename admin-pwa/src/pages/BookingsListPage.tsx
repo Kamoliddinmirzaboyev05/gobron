@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { fetchBookings } from '../api/bookings'
+import { acceptRequest, fetchBookings, rejectRequest } from '../api/bookings'
 import { fetchFields } from '../api/fields'
 import type { Booking, Field } from '../types'
 import { useLoad } from '../hooks/useLoad'
@@ -85,6 +85,14 @@ export default function BookingsListPage() {
               <BookingTile
                 key={`${b.source}-${b.id}`}
                 booking={{ ...b, fieldName: fieldNameById.get(b.fieldId) }}
+                onAccept={async (id) => {
+                  await acceptRequest(id)
+                  refresh()
+                }}
+                onReject={async (id) => {
+                  await rejectRequest(id)
+                  refresh()
+                }}
               />
             ))}
           </div>

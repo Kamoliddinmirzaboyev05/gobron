@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { fetchStats } from '../api/stats'
-import { fetchBookingsByDate } from '../api/bookings'
+import { acceptRequest, fetchBookingsByDate, rejectRequest } from '../api/bookings'
 import { fetchFields } from '../api/fields'
 import type { DashboardStats, Booking, Field } from '../types'
 import { useLoad } from '../hooks/useLoad'
@@ -76,7 +76,18 @@ export default function StatsPage() {
               {todayBookings && todayBookings.length > 0 ? (
                 <div className="flex flex-col gap-2">
                   {todayBookings.map((b) => (
-                    <BookingTile key={`${b.source}-${b.id}`} booking={b} />
+                    <BookingTile
+                      key={`${b.source}-${b.id}`}
+                      booking={b}
+                      onAccept={async (id) => {
+                        await acceptRequest(id)
+                        refresh()
+                      }}
+                      onReject={async (id) => {
+                        await rejectRequest(id)
+                        refresh()
+                      }}
+                    />
                   ))}
                 </div>
               ) : (
