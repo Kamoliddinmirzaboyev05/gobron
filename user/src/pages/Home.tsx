@@ -7,6 +7,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import { useFields } from "../hooks/useFields";
 import { useBanners } from "../hooks/useBanners";
+import { primaryFieldPerOwner } from "../lib/fields";
 import FieldCard from "../components/FieldCard";
 import { FieldListSkeleton } from "../components/Skeleton";
 import { ErrorBox } from "../components/ui";
@@ -17,14 +18,7 @@ export default function Home() {
   const { data: fields, isLoading, error } = useFields();
   const { data: banners } = useBanners();
 
-  const uniqueFields = [];
-  const seenOwners = new Set();
-  for (const f of fields || []) {
-    if (!seenOwners.has(f.owner_id)) {
-      seenOwners.add(f.owner_id);
-      uniqueFields.push(f);
-    }
-  }
+  const uniqueFields = primaryFieldPerOwner(fields);
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();

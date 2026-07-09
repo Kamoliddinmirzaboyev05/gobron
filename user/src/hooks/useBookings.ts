@@ -39,6 +39,19 @@ export function useCreateBooking() {
   });
 }
 
+export function useRateBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ bookingId, rating }: { bookingId: number; rating: number }) => {
+      await api.post(`/bookings/${bookingId}/rate`, { rating });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["fields"] });
+    },
+  });
+}
+
 export function useCancelBooking() {
   const qc = useQueryClient();
   return useMutation({

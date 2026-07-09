@@ -38,12 +38,13 @@ export default function FieldCard({ field }: { field: Field }) {
         )}
         <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-80" />
         
-        <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-gray-900 shadow-sm backdrop-blur-sm">
+        {/* z-20: Swiper sets z-index:1 on its root, so these would sit under it */}
+        <span className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold text-gray-900 shadow-sm backdrop-blur-sm">
           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
           {field.rating.toFixed(1)}
         </span>
-        
-        <div className="absolute bottom-3 left-3 pr-3 text-white">
+
+        <div className="pointer-events-none absolute bottom-3 left-3 z-20 pr-3 text-white">
           <h3 className="truncate text-lg font-bold drop-shadow-md">{field.name}</h3>
           {field.address && (
             <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-medium text-gray-200 drop-shadow">

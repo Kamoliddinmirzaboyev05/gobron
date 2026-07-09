@@ -75,6 +75,7 @@ export const bookingSchema = z.object({
   recurrence_group_id: z.string().nullable(),
   created_at: z.string(),
   slot: slotSchema.nullable().optional(),
+  rating: z.number().nullable().optional(),
 });
 
 export const bookingResultSchema = z.object({

@@ -1,4 +1,5 @@
-import { useMyBookings, useCancelBooking } from "../hooks/useBookings";
+import { Star } from "lucide-react";
+import { useMyBookings, useCancelBooking, useRateBooking } from "../hooks/useBookings";
 import { BookingListSkeleton } from "../components/Skeleton";
 import { Empty } from "../components/ui";
 import { formatPrice, shortTime } from "../lib/format";
@@ -17,6 +18,36 @@ const STATUS_LABEL: Record<Booking["status"], string> = {
   cancelled: "Bekor qilingan",
   completed: "Yakunlangan",
 };
+
+function RatingStars({ booking }: { booking: Booking }) {
+  const rate = useRateBooking();
+  const current = booking.rating ?? 0;
+
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-3">
+      <p className="mb-1.5 text-xs font-medium text-gray-500">
+        {current ? "Sizning bahoyingiz" : "Maydonni baholang"}
+      </p>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            aria-label={`${star} yulduz`}
+            disabled={rate.isPending}
+            onClick={() => rate.mutate({ bookingId: booking.id, rating: star })}
+            className="disabled:opacity-50"
+          >
+            <Star
+              className={`h-6 w-6 ${
+                star <= current ? "fill-amber-400 text-amber-400" : "text-gray-300"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function MyBookings() {
   const { data, isLoading } = useMyBookings();
@@ -61,6 +92,9 @@ export default function MyBookings() {
               >
                 Bekor qilish
               </button>
+            )}
+            {(b.status === "confirmed" || b.status === "completed") && (
+              <RatingStars booking={b} />
             )}
           </div>
         ))}

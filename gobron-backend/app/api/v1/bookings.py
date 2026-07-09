@@ -15,9 +15,11 @@ from app.schemas.booking import (
     BookingCreate,
     BookingCreateResult,
     BookingOut,
+    RatingIn,
 )
 from app.services.booking_service import BookingService, SlotUnavailableError
 from app.services.push_service import PushService
+from app.services.review_service import ReviewError, ReviewService
 
 logger = logging.getLogger(__name__)
 
@@ -96,3 +98,14 @@ async def cancel_booking(booking_id: int, db: DBSession, user: CurrentUser):
         )
     except SlotUnavailableError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc))
+
+
+@router.post("/{booking_id}/rate", status_code=status.HTTP_204_NO_CONTENT)
+async def rate_booking(booking_id: int, body: RatingIn, db: DBSession, user: CurrentUser):
+    """Rate a pitch 1..5 for a booking you made. Re-rating overwrites."""
+    try:
+        await ReviewService(db).rate_booking(
+            user_id=user.id, booking_id=booking_id, rating=body.rating
+        )
+    except ReviewError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))

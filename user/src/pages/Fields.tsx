@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { useFields, type FieldFilters, type FieldSort } from "../hooks/useFields";
 import FieldCard from "../components/FieldCard";
+import { primaryFieldPerOwner } from "../lib/fields";
 import { FieldListSkeleton } from "../components/Skeleton";
 import { Empty, ErrorBox } from "../components/ui";
 
@@ -32,14 +33,7 @@ export default function Fields() {
   };
   const { data, isLoading, error } = useFields(filters);
 
-  const uniqueFields = [];
-  const seenOwners = new Set();
-  for (const f of data || []) {
-    if (!seenOwners.has(f.owner_id)) {
-      seenOwners.add(f.owner_id);
-      uniqueFields.push(f);
-    }
-  }
+  const uniqueFields = primaryFieldPerOwner(data);
 
   return (
     <div className="px-4 py-4">

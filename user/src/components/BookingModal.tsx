@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
 import { X, Check } from "lucide-react";
@@ -36,7 +36,14 @@ export default function BookingModal({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const ref = useRef<HTMLDialogElement>(null);
   const [fieldId, setFieldId] = useState(initialFieldId);
+
+  // showModal() (not the `open` attribute) is what puts the sheet in the top
+  // layer, above the fixed bottom nav.
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
 
   // Each field's owner decides how far ahead players may book (1 = today only).
   const windowDays = fields.find((f) => f.id === fieldId)?.booking_window_days ?? 1;
@@ -110,14 +117,18 @@ export default function BookingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <dialog
+      ref={ref}
+      // Esc and dialog.close() both land here, so unmounting has one path.
+      onClose={onClose}
+      // The dialog box fills the viewport, so a tap outside the sheet targets it.
+      onClick={(e) => e.target === ref.current && ref.current.close()}
+      className="fixed inset-0 m-0 hidden h-full max-h-none w-full max-w-none items-end justify-center overflow-hidden bg-transparent p-0 backdrop:animate-fade-in backdrop:bg-black/40 open:flex"
+    >
+      <div className="max-h-[85vh] w-full max-w-md animate-sheet-in overflow-y-auto rounded-t-2xl bg-white">
         <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
           <h2 className="text-lg font-bold">Band qilish</h2>
-          <button onClick={onClose} className="text-gray-400">
+          <button onClick={() => ref.current?.close()} className="text-gray-400">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -243,6 +254,6 @@ export default function BookingModal({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

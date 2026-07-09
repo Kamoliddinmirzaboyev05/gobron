@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.booking import Booking
 from app.models.enums import BookingStatus
+from app.models.review import Review
 from app.models.slot import Slot
 
 
@@ -56,4 +57,18 @@ class BookingRepository:
         )
         if status is not None:
             stmt = stmt.where(Booking.status == status)
-        return list((await self.db.execute(stmt)).scalars().all())
+        bookings = list((await self.db.execute(stmt)).scalars().all())
+
+        # BookingOut exposes the star rating this user left. Attach it as a
+        # plain attribute rather than a relationship: a lazy-loading one would
+        # blow up during response serialization (MissingGreenlet).
+        if bookings:
+            rows = await self.db.execute(
+                select(Review.booking_id, Review.rating).where(
+                    Review.booking_id.in_([b.id for b in bookings])
+                )
+            )
+            by_booking = dict(rows.all())
+            for booking in bookings:
+                booking.rating = by_booking.get(booking.id)
+        return bookings

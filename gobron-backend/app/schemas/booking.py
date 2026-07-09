@@ -24,6 +24,10 @@ class BookingCreate(BaseModel):
         return self
 
 
+class RatingIn(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+
+
 class BookingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +40,8 @@ class BookingOut(BaseModel):
     recurrence_group_id: str | None
     created_at: datetime
     slot: SlotOut | None = None
+    # The star rating this user already left, if any.
+    rating: int | None = None
 
 
 class BookingCreateResult(BaseModel):

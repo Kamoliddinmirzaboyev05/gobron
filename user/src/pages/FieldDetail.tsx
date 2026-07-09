@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Star } from "lucide-react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -14,6 +14,7 @@ import BookingModal from "../components/BookingModal";
 export default function FieldDetail() {
   const { id } = useParams();
   const fieldId = Number(id);
+  const navigate = useNavigate();
 
   const { data: field, isLoading, error } = useField(fieldId);
   const { data: allFields } = useFields();
@@ -21,7 +22,10 @@ export default function FieldDetail() {
 
   const siblingFields = useMemo(() => {
     if (!field || !allFields) return [];
-    return allFields.filter((f) => f.owner_id === field.owner_id);
+    // Oldest first, so the owner's original pitch leads.
+    return allFields
+      .filter((f) => f.owner_id === field.owner_id)
+      .sort((a, b) => a.id - b.id);
   }, [field, allFields]);
 
   if (isLoading) return <FieldDetailSkeleton />;
@@ -67,6 +71,29 @@ export default function FieldDetail() {
         )}
         {field.description && (
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{field.description}</p>
+        )}
+
+        {siblingFields.length > 1 && (
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold text-gray-700">
+              Bu yerda {siblingFields.length} ta maydon bor
+            </h2>
+            <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+              {siblingFields.map((sf) => (
+                <button
+                  key={sf.id}
+                  onClick={() => navigate(`/fields/${sf.id}`, { replace: true })}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold ${
+                    sf.id === field.id
+                      ? "bg-pitch-600 text-white"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {sf.name}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
