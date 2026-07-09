@@ -1,5 +1,5 @@
 """Owner operations for venue, fields, manual bookings and stats."""
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -25,7 +25,7 @@ from app.schemas.owner import (
     OwnerStatsSummary,
     VenueIn,
 )
-from app.utils.clock import today_local
+from app.utils.clock import now_local, today_local
 
 
 def time_ranges_overlap(
@@ -190,6 +190,107 @@ class OwnerService:
         ]
         rows.sort(key=lambda r: (r.booking_date, r.start_time))
         return rows
+
+    async def extend_booking(
+        self, owner: User, source: str, booking_id: int, minutes: int
+    ) -> None:
+        """Add 30 or 60 minutes to a booking that is happening right now.
+
+        Slots are whole hours, so a 30-minute extension still consumes the
+        whole next slot (nobody else can take half an hour) but is charged
+        pro-rata - the trade the owner picked over splitting the slot grid.
+        """
+        if minutes not in (30, 60):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Faqat 30 yoki 60 daqiqa")
+
+        now = now_local()
+        if source == "player":
+            await self._extend_player_booking(owner, booking_id, minutes, now)
+        else:
+            await self._extend_manual_booking(owner, booking_id, minutes, now)
+        await self.db.commit()
+
+    @staticmethod
+    def _assert_in_progress(booking_date: date, start: time, end: time, now: datetime) -> None:
+        if booking_date != now.date() or not (start <= now.time() < end):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "Faqat davom etayotgan bandlikni uzaytirish mumkin"
+            )
+
+    async def _extend_player_booking(
+        self, owner: User, booking_id: int, minutes: int, now: datetime
+    ) -> None:
+        stmt = (
+            select(Booking)
+            .join(Slot, Booking.slot_id == Slot.id)
+            .join(Field, Slot.field_id == Field.id)
+            .options(joinedload(Booking.slot))
+            .where(Field.owner_id == owner.id, Booking.id == booking_id)
+        )
+        booking = (await self.db.execute(stmt)).scalar_one_or_none()
+        if booking is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Bandlik topilmadi")
+        if booking.status != BookingStatus.CONFIRMED:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Bandlik tasdiqlanmagan")
+
+        slot = booking.slot
+        self._assert_in_progress(slot.slot_date, slot.start_time, slot.end_time, now)
+
+        next_slot = (
+            await self.db.execute(
+                select(Slot).where(
+                    Slot.field_id == slot.field_id,
+                    Slot.slot_date == slot.slot_date,
+                    Slot.start_time == slot.end_time,
+                )
+            )
+        ).scalar_one_or_none()
+        if next_slot is None or next_slot.status != SlotStatus.AVAILABLE:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Keyingi vaqt bo'sh emas")
+
+        next_slot.status = SlotStatus.BOOKED
+        self.db.add(
+            Booking(
+                user_id=booking.user_id,
+                slot_id=next_slot.id,
+                status=BookingStatus.CONFIRMED,
+                total_price=self._prorate(next_slot.price, minutes),
+            )
+        )
+
+    async def _extend_manual_booking(
+        self, owner: User, booking_id: int, minutes: int, now: datetime
+    ) -> None:
+        booking = await self._get_owned_booking(owner, booking_id)
+        if booking.status != ManualBookingStatus.BOOKED:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Bandlik faol emas")
+        self._assert_in_progress(booking.booking_date, booking.start_time, booking.end_time, now)
+
+        end_dt = datetime.combine(booking.booking_date, booking.end_time) + timedelta(
+            minutes=minutes
+        )
+        if end_dt.date() != booking.booking_date:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Ish vaqti tugadi")
+        new_end = end_dt.time()
+
+        field = await self._get_owned_field(owner, booking.field_id)
+        if new_end > field.closing_time:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Ish vaqti tugadi")
+        await self._ensure_no_overlap(
+            owner.id,
+            booking.field_id,
+            booking.booking_date,
+            booking.end_time,
+            new_end,
+            exclude_booking_id=booking.id,
+        )
+
+        booking.end_time = new_end
+        booking.price += self._prorate(field.price_per_hour, minutes)
+
+    @staticmethod
+    def _prorate(hourly_price: Decimal, minutes: int) -> Decimal:
+        return (Decimal(hourly_price) * Decimal(minutes) / Decimal(60)).quantize(Decimal("0.01"))
 
     async def create_manual_booking(
         self, owner: User, body: ManualBookingCreate

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { fetchStats } from '../api/stats'
-import { acceptRequest, fetchBookingsByDate, rejectRequest } from '../api/bookings'
+import { acceptRequest, extendBooking, fetchBookingsByDate, rejectRequest } from '../api/bookings'
 import { fetchFields } from '../api/fields'
 import type { DashboardStats, Booking, Field } from '../types'
 import { useLoad } from '../hooks/useLoad'
@@ -11,6 +11,24 @@ import SlotBookingModal from '../components/SlotBookingModal'
 
 function formatSum(amount: number): string {
   return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm"
+}
+
+const UPCOMING_LIMIT = 3
+// Cancelled and finished bookings are history; the dashboard is about what's
+// still coming (including a request waiting to be accepted).
+const LIVE_STATUSES = ['pending', 'confirmed', 'booked']
+
+function currentHHMM(): string {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function upcomingBookings(bookings: Booking[] | null): Booking[] {
+  const now = currentHHMM()
+  return (bookings ?? [])
+    .filter((b) => LIVE_STATUSES.includes(b.status) && b.endTime > now)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .slice(0, UPCOMING_LIMIT)
 }
 
 export default function StatsPage() {
@@ -30,6 +48,7 @@ export default function StatsPage() {
   const { data: fields } = useLoad<Field[]>(() => fetchFields(), [])
 
   const loading = statsLoading || bookingsLoading
+  const upcoming = upcomingBookings(todayBookings)
 
   function handleBooked() {
     setShowBookingModal(false)
@@ -72,10 +91,10 @@ export default function StatsPage() {
 
             {/* Today's Bookings */}
             <section>
-              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">Bugungi bandliklar</h2>
-              {todayBookings && todayBookings.length > 0 ? (
+              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-3">Yaqinlashib kelayotgan</h2>
+              {upcoming.length > 0 ? (
                 <div className="flex flex-col gap-2">
-                  {todayBookings.map((b) => (
+                  {upcoming.map((b) => (
                     <BookingTile
                       key={`${b.source}-${b.id}`}
                       booking={b}
@@ -87,12 +106,16 @@ export default function StatsPage() {
                         await rejectRequest(id)
                         refresh()
                       }}
+                      onExtend={async (minutes) => {
+                        await extendBooking(b.source, b.id, minutes)
+                        refresh()
+                      }}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="card p-6 text-center text-gray-400 dark:text-gray-500 text-sm">
-                  Bugun band qilinmagan
+                  Yaqin bandlik yo'q
                 </div>
               )}
             </section>

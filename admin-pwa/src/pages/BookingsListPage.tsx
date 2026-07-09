@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { acceptRequest, fetchBookings, rejectRequest } from '../api/bookings'
+import { acceptRequest, extendBooking, fetchBookings, rejectRequest } from '../api/bookings'
 import { fetchFields } from '../api/fields'
 import type { Booking, Field } from '../types'
 import { useLoad } from '../hooks/useLoad'
@@ -91,6 +91,10 @@ export default function BookingsListPage() {
                 }}
                 onReject={async (id) => {
                   await rejectRequest(id)
+                  refresh()
+                }}
+                onExtend={async (minutes) => {
+                  await extendBooking(b.source, b.id, minutes)
                   refresh()
                 }}
               />

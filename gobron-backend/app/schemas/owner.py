@@ -112,6 +112,12 @@ class OwnerBookingOut(BaseModel):
     status: str
 
 
+class ExtendBookingIn(BaseModel):
+    source: Literal["manual", "player"]
+    booking_id: int
+    minutes: Literal[30, 60]
+
+
 class OwnerStatsSummary(BaseModel):
     today_revenue: Decimal
     weekly_revenue: Decimal

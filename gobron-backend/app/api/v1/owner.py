@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.broadcast import BroadcastOut
 from app.schemas.subscription import SubscriptionPaymentOut, SubscriptionPaymentCreate
 from app.schemas.owner import (
+    ExtendBookingIn,
     ManualBookingCreate,
     ManualBookingOut,
     ManualBookingUpdate,
@@ -96,6 +97,16 @@ async def update_booking(
     user: User = Depends(_owner),
 ):
     return await OwnerService(db).update_booking(user, booking_id, body)
+
+
+@router.post("/bookings/extend", status_code=status.HTTP_204_NO_CONTENT)
+async def extend_booking(
+    body: ExtendBookingIn,
+    db: DBSession,
+    user: User = Depends(_owner),
+):
+    """Add 30/60 minutes to a booking that is in progress right now."""
+    await OwnerService(db).extend_booking(user, body.source, body.booking_id, body.minutes)
 
 
 @router.post("/bookings/{booking_id}/cancel", response_model=ManualBookingOut)

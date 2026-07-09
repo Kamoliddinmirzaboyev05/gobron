@@ -76,3 +76,16 @@ export async function rejectRequest(bookingId: string): Promise<any> {
   const { data } = await api.post(`/owner/requests/${bookingId}/reject`)
   return data
 }
+
+/** Add 30 or 60 minutes to a booking that is in progress right now. */
+export async function extendBooking(
+  source: 'manual' | 'player',
+  bookingId: string,
+  minutes: 30 | 60,
+): Promise<void> {
+  await api.post('/owner/bookings/extend', {
+    source,
+    booking_id: Number(bookingId),
+    minutes,
+  })
+}

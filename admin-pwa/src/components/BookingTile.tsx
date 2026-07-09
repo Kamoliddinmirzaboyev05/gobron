@@ -22,16 +22,30 @@ function formatSum(amount: number): string {
   return new Intl.NumberFormat('uz-UZ').format(amount) + " so’m"
 }
 
+const ACTIVE_STATUSES = ['booked', 'confirmed']
+
+/** Is the game on the pitch right now? Start inclusive, end exclusive. */
+function isInProgress(b: Booking): boolean {
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  if (b.date !== today) return false
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  return b.startTime <= hhmm && hhmm < b.endTime
+}
+
 interface Props {
   booking: Booking
   /** Provided only where acting on a request makes sense; a pending player
    *  booking then renders inline accept/reject buttons. */
   onAccept?: (id: string) => Promise<void>
   onReject?: (id: string) => Promise<void>
+  /** Renders "+30 daq" / "+1 soat" while the booking is in progress. */
+  onExtend?: (minutes: 30 | 60) => Promise<void>
 }
 
-export default function BookingTile({ booking: b, onAccept, onReject }: Props) {
+export default function BookingTile({ booking: b, onAccept, onReject, onExtend }: Props) {
   const [busy, setBusy] = useState(false)
+  const [extendError, setExtendError] = useState('')
 
   const initials = b.customerName
     .split(' ')
@@ -41,6 +55,20 @@ export default function BookingTile({ booking: b, onAccept, onReject }: Props) {
     .toUpperCase()
 
   const actionable = b.source === 'player' && b.status === 'pending' && !!(onAccept && onReject)
+  const extendable = !!onExtend && ACTIVE_STATUSES.includes(b.status) && isInProgress(b)
+
+  async function extend(minutes: 30 | 60) {
+    setBusy(true)
+    setExtendError('')
+    try {
+      await onExtend!(minutes)
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setExtendError(detail ?? "Uzaytirib bo'lmadi")
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function act(fn: (id: string) => Promise<void>) {
     setBusy(true)
@@ -99,6 +127,25 @@ export default function BookingTile({ booking: b, onAccept, onReject }: Props) {
           >
             Rad etish
           </button>
+        </div>
+      )}
+
+      {extendable && (
+        <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Hozir o'ynalmoqda — vaqt qo'shish</p>
+          {extendError && <p className="text-xs text-red-500 mb-2">{extendError}</p>}
+          <div className="flex gap-2">
+            {([30, 60] as const).map((minutes) => (
+              <button
+                key={minutes}
+                onClick={() => extend(minutes)}
+                disabled={busy}
+                className="flex-1 border border-primary text-primary py-2 rounded-lg text-sm font-medium disabled:opacity-60"
+              >
+                {busy ? '...' : minutes === 30 ? '+30 daq' : '+1 soat'}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
