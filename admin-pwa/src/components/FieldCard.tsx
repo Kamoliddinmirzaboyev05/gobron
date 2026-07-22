@@ -5,6 +5,12 @@ function formatSum(amount: number): string {
 }
 
 export default function FieldCard({ field, onEdit }: { field: Field; onEdit: () => void }) {
+  function openInMaps(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (field.latitude == null || field.longitude == null) return
+    window.open(`https://www.google.com/maps?q=${field.latitude},${field.longitude}`, '_blank')
+  }
+
   return (
     <div className="card overflow-hidden" onClick={onEdit}>
       {field.images.length > 0 && (
@@ -41,12 +47,24 @@ export default function FieldCard({ field, onEdit }: { field: Field; onEdit: () 
 
         <div className="flex items-center justify-between mt-3">
           <p className="text-primary font-bold">{formatSum(field.pricePerHour)}/soat</p>
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit() }}
-            className="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors p-1"
-          >
-            <EditIcon />
-          </button>
+          <div className="flex items-center gap-1">
+            {field.latitude != null && field.longitude != null && (
+              <button
+                onClick={openInMaps}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary-light text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                title="Google Maps da ko'rish"
+              >
+                <MapPinIcon />
+                Maps
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit() }}
+              className="text-gray-400 dark:text-gray-500 hover:text-primary transition-colors p-1"
+            >
+              <EditIcon />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -64,6 +82,15 @@ function EditIcon() {
         d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+function MapPinIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   )
 }

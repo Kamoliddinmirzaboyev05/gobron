@@ -31,8 +31,37 @@ export default function FieldFormPage() {
   const [bookingWindowDays, setBookingWindowDays] = useState(
     existingField?.bookingWindowDays?.toString() ?? '3'
   )
+  const [latitude, setLatitude] = useState<number | undefined>(existingField?.latitude)
+  const [longitude, setLongitude] = useState<number | undefined>(existingField?.longitude)
+  const [locating, setLocating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  function detectLocation() {
+    if (!navigator.geolocation) {
+      setErrors((prev) => ({ ...prev, location: "Brauzer joylashuvni aniqlay olmaydi" }))
+      return
+    }
+    setLocating(true)
+    setErrors((prev) => { const e = { ...prev }; delete e.location; return e })
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(pos.coords.latitude)
+        setLongitude(pos.coords.longitude)
+        setLocating(false)
+      },
+      () => {
+        setErrors((prev) => ({ ...prev, location: "Joylashuvni aniqlab bo'lmadi. Ruxsat bering." }))
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  function openInMaps() {
+    if (latitude == null || longitude == null) return
+    window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank')
+  }
 
   async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -85,6 +114,8 @@ export default function FieldFormPage() {
       peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
       isActive,
       bookingWindowDays: Number(bookingWindowDays),
+      latitude,
+      longitude,
     }
 
     setSaving(true)
@@ -260,6 +291,54 @@ export default function FieldFormPage() {
             {errors.images && <p className="text-red-500 text-xs mt-1">{errors.images}</p>}
           </div>
 
+          {/* Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Joylashuv</label>
+
+            {latitude != null && longitude != null ? (
+              <div className="card p-3 flex items-center justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Koordinatalar</p>
+                  <p className="text-sm font-mono text-gray-800 dark:text-gray-200 truncate">
+                    {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openInMaps}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-btn bg-primary-light text-primary text-sm font-medium"
+                >
+                  <MapPinIcon />
+                  Google Maps
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-2">Joylashuv aniqlanmagan</p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={detectLocation}
+                disabled={locating}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-btn border-2 border-primary text-primary text-sm font-medium disabled:opacity-50"
+              >
+                {locating ? <SmallSpinner /> : <LocateIcon />}
+                {locating ? 'Aniqlanmoqda...' : 'Joylashuvni aniqlash'}
+              </button>
+              {latitude != null && (
+                <button
+                  type="button"
+                  onClick={() => { setLatitude(undefined); setLongitude(undefined) }}
+                  className="px-3 py-2.5 rounded-btn border-2 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm"
+                >
+                  O'chirish
+                </button>
+              )}
+            </div>
+            {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+          </div>
+
           {/* Active toggle */}
           <div className="flex items-center justify-between py-2">
             <div>
@@ -311,9 +390,27 @@ function BackIcon() {
 
 function SmallSpinner() {
   return (
-    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  )
+}
+
+function LocateIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
+  )
+}
+
+function MapPinIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   )
 }

@@ -1,6 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../fields/fields_controller.dart';
+import '../manual_bookings/manual_booking_controller.dart';
+import '../notifications/notifications_controller.dart';
+import '../payments/payments_controller.dart';
+import '../slots/slots_controller.dart';
+import '../stats/stats_controller.dart';
+import '../venue/venue_controller.dart';
 import 'auth_repository.dart';
 import 'models/user_profile.dart';
 
@@ -23,11 +30,15 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   @override
   Future<AuthState> build() async {
-    if (!await _repo.hasSession()) return const AuthState(null);
+    if (!await _repo.hasSession()) {
+      _invalidateUserData();
+      return const AuthState(null);
+    }
     try {
       return AuthState(await _repo.fetchMe());
     } catch (_) {
       await _repo.logout();
+      _invalidateUserData();
       return const AuthState(null);
     }
   }
@@ -45,7 +56,20 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   Future<void> logout() async {
     await _repo.logout();
+    _invalidateUserData();
     state = const AsyncData(AuthState(null));
+  }
+
+  /// Clears every owner-scoped provider so a different account logging in
+  /// on the same device never sees the previous owner's cached data.
+  void _invalidateUserData() {
+    ref.invalidate(fieldsControllerProvider);
+    ref.invalidate(statsControllerProvider);
+    ref.invalidate(manualBookingControllerProvider);
+    ref.invalidate(notificationsControllerProvider);
+    ref.invalidate(venueControllerProvider);
+    ref.invalidate(slotsControllerProvider);
+    ref.invalidate(paymentsControllerProvider);
   }
 }
 

@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Maydon joylashuvini aniqlash uchun GPS ishlatiladi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Maydon joylashuvini aniqlash uchun GPS ishlatiladi.</string>
 </dict>
 </plist>

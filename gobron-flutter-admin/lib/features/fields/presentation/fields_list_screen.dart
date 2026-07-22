@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/widgets/logout_action.dart';
 import '../fields_controller.dart';
 import '../models/field.dart';
 
@@ -14,10 +14,7 @@ class FieldsListScreen extends ConsumerWidget {
     final fieldsAsync = ref.watch(fieldsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mening maydonlarim'),
-        actions: const [LogoutAction()],
-      ),
+      appBar: AppBar(title: const Text('Mening maydonlarim')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/fields/new'),
         child: const Icon(Icons.add),
@@ -61,8 +58,19 @@ class _FieldCard extends StatelessWidget {
 
   final Field field;
 
+  Future<void> _openInMaps() async {
+    if (field.latitude == null || field.longitude == null) return;
+    final url = Uri.parse(
+      'https://www.google.com/maps?q=${field.latitude},${field.longitude}',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -95,23 +103,64 @@ class _FieldCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${field.size ?? 'O‘lcham kiritilmagan'} · '
+                      '${field.size ?? 'O\'lcham kiritilmagan'} · '
                       '${field.surfaceType == 'covered' ? 'Yopiq' : 'Ochiq'}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${field.pricePerHour.toStringAsFixed(0)} so‘m / soat',
+                      '${field.pricePerHour.toStringAsFixed(0)} so\'m / soat',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
+              if (field.latitude != null && field.longitude != null)
+                GestureDetector(
+                  onTap: _openInMaps,
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: Colors.green[700],
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Maps',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               IconButton(
-                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Slotlar',
+                icon: Icon(
+                  Icons.event_available_outlined,
+                  color: colorScheme.primary,
+                ),
+                onPressed: () => context.push('/fields/slots', extra: field),
+              ),
+              IconButton(
+                icon: Icon(Icons.edit_outlined, color: colorScheme.primary),
                 onPressed: () => context.push('/fields/edit', extra: field),
               ),
-              const Icon(Icons.chevron_right),
             ],
           ),
         ),

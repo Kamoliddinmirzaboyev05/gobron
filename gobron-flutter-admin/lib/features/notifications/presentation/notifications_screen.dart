@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/widgets/logout_action.dart';
 import '../notifications_controller.dart';
 
 class NotificationsScreen extends ConsumerWidget {
@@ -13,10 +12,7 @@ class NotificationsScreen extends ConsumerWidget {
     final notifications = ref.watch(notificationsControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bildirishnomalar'),
-        actions: const [LogoutAction()],
-      ),
+      appBar: AppBar(title: const Text('Bildirishnomalar')),
       body: notifications.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ListView(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/widgets/logout_action.dart';
 import '../../fields/models/field.dart' show weekdayLabels;
 import '../models/venue.dart';
 import '../venue_controller.dart';
@@ -90,10 +89,7 @@ class _VenueSettingsScreenState extends ConsumerState<VenueSettingsScreen> {
     final venueAsync = ref.watch(venueControllerProvider);
     final saving = venueAsync.isLoading && _initialized;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Obyekt sozlamalari'),
-        actions: const [LogoutAction()],
-      ),
+      appBar: AppBar(title: const Text('Obyekt sozlamalari')),
       body: venueAsync.when(
         loading: () => _initialized
             ? _form(context, saving)

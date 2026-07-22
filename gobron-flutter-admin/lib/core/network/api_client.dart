@@ -52,7 +52,18 @@ class ApiClient {
   /// Set by the auth layer; called when the refresh token is also invalid.
   void Function()? onSessionExpired;
 
-  Future<String?> _tryRefresh() async {
+  /// In-flight refresh call, shared by every request that 401s while a
+  /// refresh is already running, so concurrent 401s don't each burn the
+  /// (possibly single-use) refresh token in a race.
+  Future<String?>? _refreshFuture;
+
+  Future<String?> _tryRefresh() {
+    return _refreshFuture ??= _performRefresh().whenComplete(() {
+      _refreshFuture = null;
+    });
+  }
+
+  Future<String?> _performRefresh() async {
     final refreshToken = await _tokenStorage.readRefreshToken();
     if (refreshToken == null) return null;
     try {

@@ -1,5 +1,3 @@
-import 'package:intl/intl.dart';
-
 import '../../core/network/api_client.dart';
 import 'models/manual_booking.dart';
 
@@ -8,13 +6,9 @@ class ManualBookingRepository {
 
   final ApiClient _api;
 
-  Future<List<ManualBooking>> list({DateTime? date}) async {
-    final json = await _api.getList(
-      '/owner/bookings',
-      query: date == null
-          ? null
-          : {'date': DateFormat('yyyy-MM-dd').format(date)},
-    );
+  /// All bookings across every field owned by the current user.
+  Future<List<ManualBooking>> list() async {
+    final json = await _api.getList('/owner/bookings');
     return json
         .map((e) => ManualBooking.fromJson(e as Map<String, dynamic>))
         .toList();

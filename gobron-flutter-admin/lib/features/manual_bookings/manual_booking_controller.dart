@@ -15,18 +15,16 @@ class ManualBookingController extends AsyncNotifier<List<ManualBooking>> {
       ref.read(manualBookingRepositoryProvider);
 
   @override
-  Future<List<ManualBooking>> build() => _repo.list(date: DateTime.now());
+  Future<List<ManualBooking>> build() => _repo.list();
 
-  Future<void> refresh({DateTime? date}) async {
+  Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => _repo.list(date: date ?? DateTime.now()),
-    );
+    state = await AsyncValue.guard(_repo.list);
   }
 
   Future<void> create(ManualBookingInput input) async {
     await _repo.create(input);
-    await refresh(date: input.bookingDate);
+    await refresh();
   }
 
   Future<void> cancel(int id) async {

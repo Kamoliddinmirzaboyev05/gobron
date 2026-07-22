@@ -9,6 +9,9 @@ class Field {
     required this.name,
     this.description,
     this.address,
+    this.phone,
+    this.latitude,
+    this.longitude,
     TimeOfDay? openingTime,
     TimeOfDay? closingTime,
     this.slotDuration = 60,
@@ -22,6 +25,7 @@ class Field {
     required this.peakPriceMultiplier,
     required this.isActive,
     this.rating,
+    this.bookingWindowDays = 7,
   }) : openingTime = openingTime ?? const TimeOfDay(hour: 8, minute: 0),
        closingTime = closingTime ?? const TimeOfDay(hour: 23, minute: 0),
        workingDays = workingDays ?? const [0, 1, 2, 3, 4, 5, 6],
@@ -35,6 +39,9 @@ class Field {
       name: json['name'] as String,
       description: json['description'] as String?,
       address: json['address'] as String?,
+      phone: json['phone'] as String?,
+      latitude: json['latitude'] != null ? _toDouble(json['latitude']) : null,
+      longitude: json['longitude'] != null ? _toDouble(json['longitude']) : null,
       openingTime: json['opening_time'] != null
           ? _timeFromJson(json['opening_time'] as String)
           : null,
@@ -64,6 +71,7 @@ class Field {
           : 1,
       isActive: json['is_active'] as bool,
       rating: json['rating'] != null ? _toDouble(json['rating']) : null,
+      bookingWindowDays: json['booking_window_days'] as int? ?? 7,
     );
   }
 
@@ -72,6 +80,9 @@ class Field {
   final String name;
   final String? description;
   final String? address;
+  final String? phone;
+  final double? latitude;
+  final double? longitude;
   final TimeOfDay openingTime;
   final TimeOfDay closingTime;
   final int slotDuration; // 30 or 60
@@ -85,12 +96,16 @@ class Field {
   final double peakPriceMultiplier;
   final bool isActive;
   final double? rating;
+  final int bookingWindowDays;
 
   Map<String, dynamic> toJson() {
     return {
       'name': name,
       'description': description,
       'address': address,
+      'phone': phone,
+      'latitude': latitude,
+      'longitude': longitude,
       'opening_time': _timeToJson(openingTime),
       'closing_time': _timeToJson(closingTime),
       'slot_duration': slotDuration,
@@ -105,6 +120,7 @@ class Field {
           : null,
       'peak_price_multiplier': peakPriceMultiplier.toStringAsFixed(2),
       'is_active': isActive,
+      'booking_window_days': bookingWindowDays,
     };
   }
 
@@ -112,10 +128,18 @@ class Field {
     return {
       'name': name,
       'size': size,
+      'phone': phone,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
       'surface_type': surfaceType,
       'price_per_hour': pricePerHour.toStringAsFixed(2),
       'images': images,
       'is_active': isActive,
+      'opening_time': _timeToJson(openingTime),
+      'closing_time': _timeToJson(closingTime),
+      'booking_window_days': bookingWindowDays,
+      'amenities': [],
     };
   }
 
