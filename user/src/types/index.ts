@@ -92,8 +92,12 @@ export const bookingResultSchema = z.object({
 export const bannerSchema = z.object({
   id: z.number(),
   image_url: z.string(),
-  title: z.string().nullable().optional().default(null),
-  description: z.string().nullable().optional().default(null),
+  // nullish: API may omit fields until migration/deploy is live
+  title: z.string().nullish().transform((v) => (v && v.trim() ? v.trim() : null)),
+  description: z
+    .string()
+    .nullish()
+    .transform((v) => (v && v.trim() ? v.trim() : null)),
   link: z.string().nullable(),
   sort_order: z.number(),
   is_active: z.boolean(),

@@ -124,8 +124,11 @@ export const broadcastSchema = z.object({
 export const bannerSchema = z.object({
   id: z.number(),
   image_url: z.string(),
-  title: z.string().nullable().optional().default(null),
-  description: z.string().nullable().optional().default(null),
+  title: z.string().nullish().transform((v) => (v && v.trim() ? v.trim() : null)),
+  description: z
+    .string()
+    .nullish()
+    .transform((v) => (v && v.trim() ? v.trim() : null)),
   link: z.string().nullable(),
   sort_order: z.number(),
   is_active: z.boolean(),

@@ -37,35 +37,38 @@ const FALLBACK = [
 ];
 
 function BannerSlideContent({ banner }: { banner: Banner }) {
-  const hasText = Boolean(banner.title?.trim() || banner.description?.trim());
+  const title = banner.title?.trim() || "";
+  const description = banner.description?.trim() || "";
+  const hasText = Boolean(title || description);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
       <img
         src={banner.image_url}
-        alt={banner.title ?? "Poster"}
+        alt={title || "Poster"}
         className="absolute inset-0 h-full w-full object-cover"
         draggable={false}
       />
 
-      {/* Depth gradients */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/15" />
 
-      {/* Text + description glass panel */}
       {hasText ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[3.25rem] pt-16">
-          <div className="hero-caption max-w-[92%]">
-            {banner.title?.trim() && (
-              <h2 className="text-[1.35rem] font-extrabold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] sm:text-[1.5rem]">
-                {banner.title.trim()}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[3.4rem] pt-20">
+          <div className="hero-caption rounded-2xl border border-white/15 bg-black/35 px-3.5 py-3 shadow-lg backdrop-blur-md">
+            {title ? (
+              <h2 className="text-[1.25rem] font-extrabold leading-snug tracking-tight text-white sm:text-[1.4rem]">
+                {title}
               </h2>
-            )}
-            {banner.description?.trim() && (
-              <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.4)] sm:text-sm">
-                {banner.description.trim()}
+            ) : null}
+            {description ? (
+              <p
+                className={`line-clamp-2 text-[13px] font-medium leading-snug text-white/90 sm:text-sm ${
+                  title ? "mt-1.5" : ""
+                }`}
+              >
+                {description}
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       ) : (
@@ -89,7 +92,11 @@ export default function HeroSlider({ banners }: { banners?: Banner[] }) {
           modules={[Autoplay, Pagination, EffectFade]}
           effect="fade"
           fadeEffect={{ crossFade: true }}
-          autoplay={{ delay: 4800, disableOnInteraction: false, pauseOnMouseEnter: true }}
+          autoplay={{
+            delay: 4800,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+          }}
           pagination={{ clickable: true }}
           loop={banners.length > 1}
           className="hero-swiper h-full w-full"
@@ -148,7 +155,6 @@ export default function HeroSlider({ banners }: { banners?: Banner[] }) {
         </Swiper>
       )}
 
-      {/* Soft curve into page content */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-7 rounded-t-[1.75rem] bg-gray-50" />
     </section>
   );

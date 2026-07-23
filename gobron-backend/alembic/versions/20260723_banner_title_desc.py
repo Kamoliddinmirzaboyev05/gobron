@@ -16,13 +16,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "banners",
-        sa.Column("title", sa.String(length=200), nullable=True),
-    )
-    op.add_column(
-        "banners",
-        sa.Column("description", sa.String(length=500), nullable=True),
+    # IF NOT EXISTS: safe if column already added manually on production.
+    op.execute("ALTER TABLE banners ADD COLUMN IF NOT EXISTS title VARCHAR(200)")
+    op.execute(
+        "ALTER TABLE banners ADD COLUMN IF NOT EXISTS description VARCHAR(500)"
     )
 
 

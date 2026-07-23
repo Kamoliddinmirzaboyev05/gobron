@@ -428,19 +428,38 @@ async def get_broadcast(broadcast_id: int, db: DBSession):
 # --- Banners (user-web hero carousel) ---
 
 
+def _banner_out(b: Banner) -> BannerOut:
+    return BannerOut(
+        id=b.id,
+        image_url=b.image_url,
+        title=(b.title or None),
+        description=(b.description or None),
+        link=b.link,
+        sort_order=b.sort_order,
+        is_active=b.is_active,
+        created_at=b.created_at,
+    )
+
+
 @router.get("/banners", response_model=list[BannerOut])
 async def list_all_banners(db: DBSession):
     stmt = select(Banner).order_by(Banner.sort_order, Banner.id)
-    return list((await db.execute(stmt)).scalars().all())
+    return [_banner_out(b) for b in (await db.execute(stmt)).scalars().all()]
 
 
 @router.post("/banners", response_model=BannerOut, status_code=status.HTTP_201_CREATED)
 async def create_banner(body: BannerCreate, db: DBSession):
-    banner = Banner(**body.model_dump())
+    data = body.model_dump()
+    # Normalize empty strings → NULL
+    if data.get("title") is not None:
+        data["title"] = str(data["title"]).strip() or None
+    if data.get("description") is not None:
+        data["description"] = str(data["description"]).strip() or None
+    banner = Banner(**data)
     db.add(banner)
     await db.commit()
     await db.refresh(banner)
-    return banner
+    return _banner_out(banner)
 
 
 @router.patch("/banners/{banner_id}", response_model=BannerOut)
@@ -448,11 +467,16 @@ async def update_banner(banner_id: int, body: BannerUpdate, db: DBSession):
     banner = await db.get(Banner, banner_id)
     if banner is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Banner not found")
-    for key, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    for key in ("title", "description"):
+        if key in data and data[key] is not None:
+            data[key] = str(data[key]).strip() or None
+    for key, value in data.items():
         setattr(banner, key, value)
     await db.commit()
     await db.refresh(banner)
-    return banner
+    return _banner_out(banner)
+
 
 
 @router.delete("/banners/{banner_id}", status_code=status.HTTP_204_NO_CONTENT)
