@@ -9,6 +9,7 @@ from app.api.v1 import (
     fields,
     media,
     owner,
+    payment_intents,
     payment_settings,
     push,
     slots,
@@ -19,6 +20,7 @@ api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(banners.router)
 api_router.include_router(payment_settings.router)
+api_router.include_router(payment_intents.router)
 api_router.include_router(fields.router)
 api_router.include_router(media.router)
 api_router.include_router(push.router)

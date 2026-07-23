@@ -23,7 +23,7 @@ async function phoneAuth(phone: string, password: string, fullName?: string): Pr
     password,
     full_name: fullName,
   })
-  tokenStorage.saveTokens(data.access_token, data.refresh_token, data.expires_in ?? 3600)
+  tokenStorage.saveTokens(data.access_token, data.refresh_token, data.expires_in ?? 86400)
   return data
 }
 
@@ -46,7 +46,7 @@ export async function checkAuth(): Promise<boolean> {
 
   try {
     const { data } = await api.post<LoginResponse>('/auth/refresh', { refresh_token: rt })
-    tokenStorage.saveTokens(data.access_token, data.refresh_token, data.expires_in ?? 3600)
+    tokenStorage.saveTokens(data.access_token, data.refresh_token, data.expires_in ?? 86400)
     return true
   } catch {
     tokenStorage.clear()

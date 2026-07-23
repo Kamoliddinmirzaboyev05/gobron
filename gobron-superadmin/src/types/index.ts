@@ -4,6 +4,7 @@ export const tokenPairSchema = z.object({
   access_token: z.string(),
   refresh_token: z.string(),
   token_type: z.string().default("bearer"),
+  expires_in: z.number().optional(),
 });
 
 export const userSchema = z.object({
@@ -30,7 +31,11 @@ export const fieldSchema = z.object({
   address: z.string().nullable(),
   latitude: z.number().nullable(),
   longitude: z.number().nullable(),
-  images: z.array(z.string()),
+  images: z.array(z.string()).default([]),
+  amenities: z.array(z.string()).optional().default([]),
+  surface_type: z.string().optional().default("open"),
+  size: z.string().nullable().optional().default(null),
+  phone: z.string().nullable().optional().default(null),
   rating: z.number(),
   opening_time: z.string(),
   closing_time: z.string(),
@@ -93,6 +98,13 @@ export const fieldOwnerSchema = z.object({
   contact_phone: z.string().nullable(),
   is_verified: z.boolean(),
   created_at: z.string(),
+  full_name: z.string().optional().default(""),
+  phone: z.string().nullable().optional().default(null),
+  is_blocked: z.boolean().optional().default(false),
+  is_active: z.boolean().optional().default(true),
+  fields_count: z.number().optional().default(0),
+  active_fields_count: z.number().optional().default(0),
+  field_names: z.array(z.string()).optional().default([]),
 });
 
 export const broadcastAudienceSchema = z.enum(["bot_users", "field_owners", "all"]);

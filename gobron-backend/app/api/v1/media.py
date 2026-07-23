@@ -11,13 +11,16 @@ from pathlib import Path
 
 import pillow_heif
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
-from PIL import Image
+from PIL import Image, ImageFile
 
 from app.core.config import settings
 from app.core.deps import require_role
 from app.models.enums import UserRole
 
 pillow_heif.register_heif_opener()
+# Refuse truncated / bomb-like streams early.
+ImageFile.LOAD_TRUNCATED_IMAGES = False
+Image.MAX_IMAGE_PIXELS = 40_000_000  # ~40 MP
 
 router = APIRouter(prefix="/media", tags=["media"])
 
@@ -43,7 +46,10 @@ async def upload_image(
 
     try:
         image = Image.open(io.BytesIO(body))
+        image.load()  # force full decode so bombs / corrupt files fail here
         image = image.convert("RGB")
+    except Image.DecompressionBombError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rasm o'lchami juda katta")
     except Exception:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Rasm fayli buzilgan yoki noto'g'ri format")
 

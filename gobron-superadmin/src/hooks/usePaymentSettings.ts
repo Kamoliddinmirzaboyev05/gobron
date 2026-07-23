@@ -6,6 +6,7 @@ export const paymentSettingsSchema = z.object({
   card_number: z.string(),
   card_holder: z.string(),
   bank_name: z.string().nullable(),
+  subscription_amount: z.coerce.number().default(50000),
 });
 
 export type PaymentSettings = z.infer<typeof paymentSettingsSchema>;

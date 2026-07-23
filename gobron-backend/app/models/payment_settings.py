@@ -6,7 +6,9 @@ ever stored here.
 """
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from decimal import Decimal
+
+from sqlalchemy import DateTime, Numeric, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -19,6 +21,10 @@ class PaymentSettings(Base):
     card_number: Mapped[str] = mapped_column(String(32), nullable=False, default="")
     card_holder: Mapped[str] = mapped_column(String(150), nullable=False, default="")
     bank_name: Mapped[str | None] = mapped_column(String(100))
+    # Monthly subscription base fee (so'm). Unique tip (1–99) is added per intent.
+    subscription_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal("50000"), nullable=False
+    )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

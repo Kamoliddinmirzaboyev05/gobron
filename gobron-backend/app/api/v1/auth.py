@@ -50,7 +50,10 @@ async def telegram_login(body: TelegramLogin, db: DBSession):
 
 @router.post("/otp/request", status_code=status.HTTP_204_NO_CONTENT)
 async def request_otp(body: OTPRequest, db: DBSession):
-    await AuthService(db).request_otp(body.phone)
+    try:
+        await AuthService(db).request_otp(body.phone)
+    except AuthError as exc:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(exc))
 
 
 @router.post("/otp/verify", response_model=TokenPair)

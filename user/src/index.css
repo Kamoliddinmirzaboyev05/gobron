@@ -64,6 +64,7 @@ body {
 /* A swiper-slide has no intrinsic height, so an `h-full` <img> inside one
    resolves to the image's natural height and escapes its fixed-height card.
    Pin the whole chain to the wrapper's height instead. */
+.hero-swiper,
 .hero-swiper .swiper-wrapper,
 .hero-swiper .swiper-slide,
 .field-card-swiper .swiper-wrapper,
@@ -71,14 +72,28 @@ body {
   height: 100%;
 }
 
-/* Swiper pagination bullets read poorly on photos with the library default
-   (dark gray on light) - brighten them for the image-carousel use cases. */
-.hero-swiper .swiper-pagination-bullet,
+/* Pill pagination on hero photos */
+.hero-swiper .swiper-pagination {
+  bottom: 2.25rem !important;
+}
+.hero-swiper .swiper-pagination-bullet {
+  background: #fff;
+  opacity: 0.45;
+  width: 6px;
+  height: 6px;
+  transition: all 0.25s ease;
+}
+.hero-swiper .swiper-pagination-bullet-active {
+  opacity: 1;
+  width: 18px;
+  border-radius: 999px;
+  background: #fff;
+}
+
 .field-card-swiper .swiper-pagination-bullet {
   background: #fff;
-  opacity: 0.6;
+  opacity: 0.55;
 }
-.hero-swiper .swiper-pagination-bullet-active,
 .field-card-swiper .swiper-pagination-bullet-active {
   opacity: 1;
 }

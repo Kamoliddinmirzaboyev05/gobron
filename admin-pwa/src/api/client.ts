@@ -21,7 +21,7 @@ async function doRefresh(): Promise<string | null> {
   if (!rt) return null
   try {
     const { data } = await refreshAxios.post('/auth/refresh', { refresh_token: rt })
-    const expiresIn: number = data.expires_in ?? 3600
+    const expiresIn: number = data.expires_in ?? 86400
     tokenStorage.saveTokens(data.access_token, data.refresh_token, expiresIn)
     return data.access_token as string
   } catch {

@@ -20,16 +20,17 @@ class PasswordLogin(BaseModel):
 class PhoneLogin(BaseModel):
     phone: str = Field(..., min_length=7, max_length=20)
     full_name: str | None = Field(None, min_length=2, max_length=120)
-    # Set on registration (full_name present) and required to log back in
-    # afterwards. Accounts created without a password (older phone-only
-    # flow, e.g. flutter-admin) keep logging in without one.
-    password: str | None = Field(None, min_length=6, max_length=128)
+    # Required for registration and every login. Legacy accounts without a
+    # password set one on the next successful login.
+    password: str = Field(..., min_length=6, max_length=128)
 
 
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    # Seconds until the access token expires (for client-side refresh timers).
+    expires_in: int
 
 
 class RefreshRequest(BaseModel):

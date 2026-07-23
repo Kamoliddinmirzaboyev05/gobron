@@ -10,11 +10,36 @@ import { getSubscriptionStatus } from '../utils/subscription'
 import { formatUzPhone, extractPhoneDigits } from '../utils/phone'
 import { SoccerIcon } from '../components/BrandIcons'
 import TopBar from '../components/TopBar'
-import { uploadImage } from '../api/media'
+import HumoPaymentCard from '../components/HumoPaymentCard'
 import { fetchPaymentSettings, type PaymentSettings } from '../api/paymentSettings'
-import { createSubscriptionPayment, fetchSubscriptionPayments, type SubscriptionPayment } from '../api/subscription'
+import {
+  fetchPaymentIntents,
+  type PaymentIntent,
+} from '../api/paymentIntents'
 import { format } from 'date-fns'
 import { uz } from 'date-fns/locale'
+
+const STATUS_UI: Record<
+  PaymentIntent['status'],
+  { label: string; className: string }
+> = {
+  pending: {
+    label: 'Kutilmoqda',
+    className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
+  },
+  paid: {
+    label: 'Toʻlangan',
+    className: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  },
+  expired: {
+    label: 'Muddati oʻtgan',
+    className: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  },
+  expired_paid: {
+    label: 'Kechikkan toʻlov',
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  },
+}
 
 export default function ProfilePage() {
   const logout = useAuthStore((s) => s.logout)
@@ -26,64 +51,27 @@ export default function ProfilePage() {
   const { data: profile } = useLoad<OwnerProfile>(() => fetchMe(), [])
   const { data: fields } = useLoad<Field[]>(() => fetchFields(), [])
   const { data: paymentSettings } = useLoad<PaymentSettings>(() => fetchPaymentSettings(), [])
-  const monthlyPrice = fields?.[0]?.pricePerHour ?? 0
+  const monthlyPrice = Number(paymentSettings?.subscription_amount ?? fields?.[0]?.pricePerHour ?? 0)
   const subscription = profile ? getSubscriptionStatus(profile.createdAt) : null
 
-  const [amount, setAmount] = useState('')
-  const [receiptImage, setReceiptImage] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [paymentError, setPaymentError] = useState('')
-  const [payments, setPayments] = useState<SubscriptionPayment[]>([])
-  const [paymentsLoading, setPaymentsLoading] = useState(true)
+  const [intents, setIntents] = useState<PaymentIntent[]>([])
+  const [historyLoading, setHistoryLoading] = useState(true)
 
-  async function loadPayments() {
+  async function loadHistory() {
     try {
-      setPayments(await fetchSubscriptionPayments())
+      setIntents(await fetchPaymentIntents())
     } catch {
-      console.error('Failed to load payments')
+      /* ignore */
     } finally {
-      setPaymentsLoading(false)
+      setHistoryLoading(false)
     }
   }
 
   useEffect(() => {
-    loadPayments()
+    loadHistory()
+    const id = window.setInterval(loadHistory, 8000)
+    return () => window.clearInterval(id)
   }, [])
-
-  async function handlePaymentFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setPaymentError('')
-    try {
-      setReceiptImage(await uploadImage(file, () => {}))
-    } catch {
-      setPaymentError("Rasmni yuklashda xatolik yuz berdi.")
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  async function handlePaymentSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!amount || !receiptImage) {
-      setPaymentError("Summa va chek rasmini kiritish majburiy.")
-      return
-    }
-    setSaving(true)
-    setPaymentError('')
-    try {
-      await createSubscriptionPayment(Number(amount), receiptImage)
-      setAmount('')
-      setReceiptImage('')
-      loadPayments()
-    } catch {
-      setPaymentError("Xatolik yuz berdi. Qayta urinib ko'ring.")
-    } finally {
-      setSaving(false)
-    }
-  }
 
   return (
     <div className="flex flex-col min-h-full">
@@ -96,7 +84,9 @@ export default function ProfilePage() {
             <SoccerIcon size={80} />
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{profile?.fullName || '—'}</p>
+            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              {profile?.fullName || '—'}
+            </p>
             <p className="text-gray-500 dark:text-gray-400">
               {profile?.phone ? formatUzPhone(extractPhoneDigits(profile.phone)) : '—'}
             </p>
@@ -120,109 +110,64 @@ export default function ProfilePage() {
                 {subscription.isTrial ? 'Bepul' : 'Faol'}
               </span>
             </div>
-
-            <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+            <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${((subscription.totalDays - subscription.daysLeft) / subscription.totalDays) * 100}%` }}
+                className="h-full bg-primary rounded-full"
+                style={{
+                  width: `${
+                    ((subscription.totalDays - subscription.daysLeft) / subscription.totalDays) *
+                    100
+                  }%`,
+                }}
               />
             </div>
-
             <div className="flex items-center justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
               <span>{subscription.daysLeft} kun qoldi</span>
-              <span>{format(subscription.nextPaymentDate, 'd MMM yyyy', { locale: uz })}</span>
+              <span>
+                {format(subscription.nextPaymentDate, 'd MMM yyyy', { locale: uz })}
+              </span>
             </div>
-
-            {!subscription.isTrial && (
+            {!subscription.isTrial && monthlyPrice > 0 && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Keyingi to'lov: <span className="font-medium text-gray-900 dark:text-gray-100">{monthlyPrice.toLocaleString('uz-UZ')} so'm</span>
+                Keyingi to'lov:{' '}
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {monthlyPrice.toLocaleString('uz-UZ')} so'm
+                </span>
               </p>
             )}
           </div>
         )}
 
-        {/* Payment */}
-        {paymentSettings?.card_number && (
-          <div className="card p-5 bg-primary text-white">
-            <h2 className="font-semibold mb-2">Tizim to'lovi uchun rekvizitlar</h2>
-            <p className="text-sm opacity-90 mb-4">
-              Quyidagi karta raqamiga to'lov qiling va chek skrinshotini yuklang.
-            </p>
-            <div className="bg-white/10 p-3 rounded-lg backdrop-blur-sm border border-white/20">
-              <p className="text-xs opacity-80 uppercase tracking-wider mb-1">Karta raqami</p>
-              <p className="text-xl tracking-[0.2em] font-mono">{paymentSettings.card_number}</p>
-              <p className="text-sm mt-1">{paymentSettings.card_holder}</p>
-              {paymentSettings.bank_name && (
-                <p className="text-xs opacity-80 mt-0.5">{paymentSettings.bank_name}</p>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Humo auto-pay */}
+        <HumoPaymentCard />
 
-        <div className="card p-4">
-          <h2 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">To'lovni tasdiqlash</h2>
-          <form onSubmit={handlePaymentSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">To'langan summa</label>
-              <input
-                type="number"
-                className="input-field"
-                placeholder="Misol uchun: 100000"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Chek skrinshoti</label>
-              {receiptImage ? (
-                <div className="relative h-40 rounded-xl overflow-hidden bg-gray-100">
-                  <img src={receiptImage} alt="Chek" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setReceiptImage('')}
-                    className="absolute top-2 right-2 bg-black/50 text-white p-2 rounded-full backdrop-blur-sm"
-                  >
-                    X
-                  </button>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 cursor-pointer">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {uploading ? 'Yuklanmoqda...' : 'Rasm tanlash'}
-                  </span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePaymentFile} disabled={uploading} />
-                </label>
-              )}
-            </div>
-
-            {paymentError && <p className="text-red-500 text-sm">{paymentError}</p>}
-
-            <button type="submit" disabled={saving || uploading} className="btn-primary mt-2">
-              {saving ? 'Yuborilmoqda...' : 'Yuborish'}
-            </button>
-          </form>
-        </div>
-
+        {/* History */}
         <div>
-          <h2 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">To'lovlar tarixi</h2>
-          {paymentsLoading ? (
+          <h2 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">
+            To'lovlar tarixi
+          </h2>
+          {historyLoading ? (
             <div className="text-center text-sm text-gray-500">Yuklanmoqda...</div>
-          ) : payments.length > 0 ? (
+          ) : intents.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {payments.map(p => (
-                <div key={p.id} className="card p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">{p.amount} so'm</p>
-                    <p className="text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString()}</p>
+              {intents.map((p) => {
+                const ui = STATUS_UI[p.status] ?? STATUS_UI.pending
+                return (
+                  <div key={p.id} className="card p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
+                        {p.unique_amount.toLocaleString('uz-UZ')} so'm
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(p.created_at).toLocaleString('uz-UZ')}
+                      </p>
+                    </div>
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${ui.className}`}>
+                      {ui.label}
+                    </span>
                   </div>
-                  <div>
-                    {p.status === 'pending' && <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">Kutilmoqda</span>}
-                    {p.status === 'approved' && <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Tasdiqlandi</span>}
-                    {p.status === 'rejected' && <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Rad etildi</span>}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="card p-6 text-center text-gray-500 text-sm">
@@ -278,7 +223,9 @@ function ToggleRow({
       <button
         type="button"
         onClick={onChange}
-        className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
+        className={`relative w-12 h-6 rounded-full transition-colors ${
+          checked ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+        }`}
       >
         <span
           className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${

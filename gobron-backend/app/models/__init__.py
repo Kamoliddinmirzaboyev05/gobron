@@ -16,6 +16,7 @@ from app.models.slot import Slot
 from app.models.user import User
 from app.models.venue import Venue
 from app.models.subscription_payment import SubscriptionPayment
+from app.models.payment_intent import PaymentIntent, UnmatchedTransaction
 
 __all__ = [
     "Base",
@@ -33,4 +34,6 @@ __all__ = [
     "PushSubscription",
     "Review",
     "SubscriptionPayment",
+    "PaymentIntent",
+    "UnmatchedTransaction",
 ]

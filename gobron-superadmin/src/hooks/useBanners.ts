@@ -30,6 +30,23 @@ export function useCreateBanner() {
   });
 }
 
+export function useUpdateBanner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<BannerInput>;
+    }): Promise<Banner> => {
+      const res = await api.patch(`/admin/banners/${id}`, data);
+      return bannerSchema.parse(res.data);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["banners"] }),
+  });
+}
+
 export function useDeleteBanner() {
   const qc = useQueryClient();
   return useMutation({

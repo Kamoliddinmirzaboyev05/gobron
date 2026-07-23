@@ -86,10 +86,12 @@ function VenueSettingsCard({ venue }: { venue: Venue }) {
   const [name, setName] = useState(venue.name)
   const [address, setAddress] = useState(venue.address)
   const [landmark, setLandmark] = useState(venue.landmark ?? '')
-  const [openingTime, setOpeningTime] = useState(venue.openingTime)
-  const [closingTime, setClosingTime] = useState(venue.closingTime)
-  const [workingDays, setWorkingDays] = useState<number[]>(venue.workingDays)
-  const [isActive, setIsActive] = useState(venue.isActive)
+  const [openingTime, setOpeningTime] = useState(venue.openingTime ?? '08:00')
+  const [closingTime, setClosingTime] = useState(venue.closingTime ?? '23:00')
+  const [workingDays, setWorkingDays] = useState<number[]>(
+    venue.workingDays ?? [0, 1, 2, 3, 4, 5, 6],
+  )
+  const [isActive, setIsActive] = useState(venue.isActive ?? true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -98,16 +100,17 @@ function VenueSettingsCard({ venue }: { venue: Venue }) {
     setName(venue.name)
     setAddress(venue.address)
     setLandmark(venue.landmark ?? '')
-    setOpeningTime(venue.openingTime)
-    setClosingTime(venue.closingTime)
-    setWorkingDays(venue.workingDays)
-    setIsActive(venue.isActive)
+    setOpeningTime(venue.openingTime ?? '08:00')
+    setClosingTime(venue.closingTime ?? '23:00')
+    setWorkingDays(venue.workingDays ?? [0, 1, 2, 3, 4, 5, 6])
+    setIsActive(venue.isActive ?? true)
   }, [venue])
 
   function toggleDay(day: number) {
-    setWorkingDays((days) =>
-      days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort()
-    )
+    setWorkingDays((days) => {
+      const list = days ?? []
+      return list.includes(day) ? list.filter((d) => d !== day) : [...list, day].sort()
+    })
   }
 
   async function handleSubmit(e: FormEvent) {

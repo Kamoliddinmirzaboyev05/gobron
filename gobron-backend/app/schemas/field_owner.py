@@ -24,3 +24,15 @@ class FieldOwnerOut(BaseModel):
     contact_phone: str | None
     is_verified: bool
     created_at: datetime
+
+
+class FieldOwnerAdminOut(FieldOwnerOut):
+    """Enriched card for superadmin list."""
+
+    full_name: str = ""
+    phone: str | None = None
+    is_blocked: bool = False
+    is_active: bool = True
+    fields_count: int = 0
+    active_fields_count: int = 0
+    field_names: list[str] = []

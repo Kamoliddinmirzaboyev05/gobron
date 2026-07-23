@@ -16,19 +16,26 @@ Multi-slot (ONCE only): a player can grab several back-to-back slots (e.g.
 11:00-12:00 + 12:00-13:00) as one 2-hour booking, but not a gappy selection
 like 11:00-12:00 + 15:00-16:00 - contiguity is enforced in _contiguous_slots.
 They share a group_id the same way recurrence occurrences do.
+
+Manual bookings (owner-entered) live in a separate table; we reject any player
+booking that overlaps an active manual range on the same field.
 """
 import uuid
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
+from app.core.config import settings
 from app.models.booking import Booking
-from app.models.enums import BookingStatus, RecurrenceType, SlotStatus
+from app.models.enums import BookingStatus, ManualBookingStatus, RecurrenceType, SlotStatus
+from app.models.manual_booking import ManualBooking
 from app.models.slot import Slot
 from app.repositories.slot_repository import SlotRepository
+from app.utils.clock import now_local
 
 
 class SlotUnavailableError(Exception):
@@ -78,6 +85,18 @@ class BookingService:
                 raise SlotUnavailableError("Slots must be back-to-back on the same field")
         return ordered
 
+    async def _assert_no_manual_overlap(self, slot: Slot) -> None:
+        """Reject if an owner manual booking already covers this slot's window."""
+        stmt = select(ManualBooking.id).where(
+            ManualBooking.field_id == slot.field_id,
+            ManualBooking.booking_date == slot.slot_date,
+            ManualBooking.status == ManualBookingStatus.BOOKED,
+            ManualBooking.start_time < slot.end_time,
+            ManualBooking.end_time > slot.start_time,
+        ).limit(1)
+        if (await self.db.execute(stmt)).scalar_one_or_none() is not None:
+            raise SlotUnavailableError("Bu vaqt egasi tomonidan band qilingan")
+
     async def create_booking(
         self,
         *,
@@ -106,6 +125,10 @@ class BookingService:
                 # All-or-nothing: partially booking a contiguous block would
                 # leave the exact gap this feature exists to prevent.
                 raise SlotUnavailableError("One of the selected slots is no longer available")
+
+        for slot in targets:
+            if slot.status == SlotStatus.AVAILABLE:
+                await self._assert_no_manual_overlap(slot)
 
         group_id = str(uuid.uuid4()) if len(targets) > 1 else None
 
@@ -155,12 +178,30 @@ class BookingService:
             raise SlotUnavailableError("Booking not found")
         if booking.status == BookingStatus.CANCELLED:
             return booking
+        if booking.status == BookingStatus.COMPLETED:
+            raise SlotUnavailableError("Tugagan bronni bekor qilib bo'lmaydi")
+
+        slot = await self.slots.get(booking.slot_id)
+        if slot is not None:
+            self._assert_cancellable(slot)
 
         booking.status = BookingStatus.CANCELLED
-        slot = await self.slots.get(booking.slot_id)
         if slot is not None and slot.status == SlotStatus.BOOKED:
             slot.status = SlotStatus.AVAILABLE
         await self.db.commit()
         await self.db.refresh(booking)
         booking.slot = slot  # avoid the same lazy-load crash as create_booking
         return booking
+
+    @staticmethod
+    def _assert_cancellable(slot: Slot) -> None:
+        """Players may cancel only while kickoff is far enough away."""
+        now = now_local()
+        kickoff = datetime.combine(slot.slot_date, slot.start_time)
+        lead = kickoff - now
+        min_lead = timedelta(minutes=settings.CANCEL_MIN_LEAD_MINUTES)
+        if lead < min_lead:
+            raise SlotUnavailableError(
+                f"Bronni startga {settings.CANCEL_MIN_LEAD_MINUTES} daqiqa qolganda "
+                "yoki keyinroq bekor qilib bo'lmaydi"
+            )

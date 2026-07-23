@@ -86,6 +86,7 @@ async def update_field(
 async def delete_field(
     field_id: int, db: DBSession, user: User = Depends(_owner_or_admin)
 ):
+    """Soft-delete: deactivate so booking history is preserved."""
     field = await _load_owned(field_id, db, user)
-    await db.delete(field)
+    field.is_active = False
     await db.commit()

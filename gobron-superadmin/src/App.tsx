@@ -16,23 +16,54 @@ import { Spinner } from "./components/ui";
 
 export default function App() {
   const hasToken = !!tokens.access;
-  const { data: user, isLoading } = useMe();
+  const { data: user, isLoading, isError, error } = useMe();
 
   if (!hasToken) return <Login />;
-  if (isLoading) return <Spinner />;
 
-  // Only superadmins may use this panel.
-  if (user && user.role !== "superadmin") {
+  if (isLoading) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <Spinner />
+        <p className="text-sm text-gray-400">Yuklanmoqda...</p>
+      </div>
+    );
+  }
+
+  if (isError || !user) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-gray-500">
+          Sessiya yaroqsiz yoki server javob bermadi.
+        </p>
+        <p className="max-w-sm text-xs text-gray-400">
+          {(error as Error)?.message}
+        </p>
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-lg bg-pitch-600 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Qayta kirish
+        </button>
+      </div>
+    );
+  }
+
+  if (user.role !== "superadmin") {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <p className="text-gray-500">Bu panelga faqat superadmin kira oladi.</p>
-        <button onClick={logout} className="rounded-lg bg-pitch-600 px-4 py-2 text-sm font-semibold text-white">
+        <p className="text-xs text-gray-400">Sizning rol: {user.role}</p>
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-lg bg-pitch-600 px-4 py-2 text-sm font-semibold text-white"
+        >
           Chiqish
         </button>
       </div>
     );
   }
-  if (!user) return <Login />;
 
   return (
     <Routes>

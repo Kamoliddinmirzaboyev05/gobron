@@ -132,8 +132,13 @@ class OwnerService:
         return field
 
     async def delete_field(self, owner: User, field_id: int) -> None:
+        """Soft-delete: hide the field and drop future free slots.
+
+        Existing bookings keep their history; hard CASCADE delete would wipe them.
+        """
         field = await self._get_owned_field(owner, field_id)
-        await self.db.delete(field)
+        field.is_active = False
+        await SlotService(self.db).prune_available_slots(field, today_local())
         await self.db.commit()
 
     async def list_bookings(
@@ -306,6 +311,10 @@ class OwnerService:
         )
         booking = ManualBooking(owner_id=owner.id, **body.model_dump())
         self.db.add(booking)
+        # Hold the slot grid so players cannot double-book this window.
+        await self._block_slots_in_range(
+            body.field_id, body.booking_date, body.start_time, body.end_time
+        )
         await self.db.commit()
         await self.db.refresh(booking)
         return booking
@@ -328,8 +337,21 @@ class OwnerService:
             next_end,
             exclude_booking_id=booking.id,
         )
+        # Free previous window, then re-block the new one.
+        if booking.status == ManualBookingStatus.BOOKED:
+            await self._release_slots_in_range(
+                booking.field_id,
+                booking.booking_date,
+                booking.start_time,
+                booking.end_time,
+                exclude_manual_id=booking.id,
+            )
         for key, value in data.items():
             setattr(booking, key, value)
+        if booking.status == ManualBookingStatus.BOOKED:
+            await self._block_slots_in_range(
+                booking.field_id, next_date, next_start, next_end
+            )
         await self.db.commit()
         await self.db.refresh(booking)
         return booking
@@ -337,6 +359,13 @@ class OwnerService:
     async def cancel_booking(self, owner: User, booking_id: int) -> ManualBooking:
         booking = await self._get_owned_booking(owner, booking_id)
         booking.status = ManualBookingStatus.CANCELLED
+        await self._release_slots_in_range(
+            booking.field_id,
+            booking.booking_date,
+            booking.start_time,
+            booking.end_time,
+            exclude_manual_id=booking.id,
+        )
         await self.db.commit()
         await self.db.refresh(booking)
         return booking
@@ -447,6 +476,7 @@ class OwnerService:
         end_time: time,
         exclude_booking_id: int | None = None,
     ) -> None:
+        """Block both other manual entries and player-held slots."""
         stmt = select(ManualBooking).where(
             ManualBooking.owner_id == owner_id,
             ManualBooking.field_id == field_id,
@@ -462,6 +492,101 @@ class OwnerService:
             raise HTTPException(
                 status.HTTP_409_CONFLICT, "Time range is already booked"
             )
+
+        # Player bookings mark slots BOOKED (even while PENDING).
+        player_slot = (
+            await self.db.execute(
+                select(Slot.id).where(
+                    Slot.field_id == field_id,
+                    Slot.slot_date == booking_date,
+                    Slot.status == SlotStatus.BOOKED,
+                    Slot.start_time < end_time,
+                    Slot.end_time > start_time,
+                ).limit(1)
+            )
+        ).scalar_one_or_none()
+        if player_slot is not None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Bu vaqt o'yinchi tomonidan band qilingan",
+            )
+
+    async def _block_slots_in_range(
+        self,
+        field_id: int,
+        booking_date: date,
+        start_time: time,
+        end_time: time,
+    ) -> None:
+        """Mark free slots in the range BLOCKED so the public grid cannot sell them."""
+        rows = (
+            await self.db.execute(
+                select(Slot).where(
+                    Slot.field_id == field_id,
+                    Slot.slot_date == booking_date,
+                    Slot.status == SlotStatus.AVAILABLE,
+                    Slot.start_time < end_time,
+                    Slot.end_time > start_time,
+                )
+            )
+        ).scalars().all()
+        for slot in rows:
+            slot.status = SlotStatus.BLOCKED
+
+    async def _release_slots_in_range(
+        self,
+        field_id: int,
+        booking_date: date,
+        start_time: time,
+        end_time: time,
+        *,
+        exclude_manual_id: int | None = None,
+    ) -> None:
+        """Unblock slots that are no longer covered by any active manual booking.
+
+        Never touches BOOKED slots (player reservations).
+        """
+        rows = (
+            await self.db.execute(
+                select(Slot).where(
+                    Slot.field_id == field_id,
+                    Slot.slot_date == booking_date,
+                    Slot.status == SlotStatus.BLOCKED,
+                    Slot.start_time < end_time,
+                    Slot.end_time > start_time,
+                )
+            )
+        ).scalars().all()
+        for slot in rows:
+            still_held = await self._manual_covers(
+                field_id,
+                booking_date,
+                slot.start_time,
+                slot.end_time,
+                exclude_manual_id=exclude_manual_id,
+            )
+            if not still_held:
+                slot.status = SlotStatus.AVAILABLE
+
+    async def _manual_covers(
+        self,
+        field_id: int,
+        booking_date: date,
+        start_time: time,
+        end_time: time,
+        *,
+        exclude_manual_id: int | None = None,
+    ) -> bool:
+        stmt = select(ManualBooking.id).where(
+            ManualBooking.field_id == field_id,
+            ManualBooking.booking_date == booking_date,
+            ManualBooking.status == ManualBookingStatus.BOOKED,
+            ManualBooking.start_time < end_time,
+            ManualBooking.end_time > start_time,
+        ).limit(1)
+        if exclude_manual_id is not None:
+            stmt = stmt.where(ManualBooking.id != exclude_manual_id)
+        return (await self.db.execute(stmt)).scalar_one_or_none() is not None
 
     async def _sum_revenue(
         self, owner_id: int, start_date: date, end_date: date

@@ -80,6 +80,8 @@ class UserRepository:
     async def create_field_owner_by_phone(
         self, phone: str, full_name: str, hashed_password: str | None = None
     ) -> User:
+        from app.models.field_owner import FieldOwner
+
         parts = full_name.strip().split(maxsplit=1)
         user = User(
             phone=phone,
@@ -92,5 +94,16 @@ class UserRepository:
             is_onboarded=True,
         )
         self.db.add(user)
+        await self.db.flush()
+        # Superadmin "Maydon egalari" o'qiydi field_owners jadvalidan —
+        # profil bo'lmasa ro'yxat bo'sh qoladi.
+        self.db.add(
+            FieldOwner(
+                user_id=user.id,
+                business_name=full_name.strip() or parts[0],
+                contact_phone=phone,
+                is_verified=False,
+            )
+        )
         await self.db.flush()
         return user

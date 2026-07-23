@@ -93,11 +93,16 @@ python -m tests.test_slot_engine     # pure slot-tiling + pricing checks
 | Stats    | `GET /stats/dashboard` (owner sees own, superadmin sees all) |
 | Admin    | `GET /admin/users`, block/unblock/role/delete, `POST /admin/broadcasts` |
 
-## Notes / deliberate shortcuts
+## Notes
 
 - OTP store is in-memory (single worker); move to Redis to scale out.
-- `/auth/phone-login` is a temporary OTP-free login for field owners while the
-  owner app is being launched; replace it with SMS verification before broad
-  public rollout.
+- Phone-login requires a password (min 6). Legacy accounts set a password on
+  next login. OTP dev master code is forced off when `ENVIRONMENT=production`.
+- Manual bookings and player slots share one calendar: overlapping ranges are
+  rejected both ways; manual create blocks free slots.
+- Players cannot cancel within `CANCEL_MIN_LEAD_MINUTES` of kickoff (default 60).
+- Field delete is soft (`is_active=false`); booking history is kept.
+- Slot window + booking settle run hourly in the bot process (`bot/maintenance_loop.py`).
+- Subscription payments are card + receipt (no Click/Payme).
 - Broadcast sender is sequential (~20 msg/s); move to a queue for large audiences.
-- Payments (Click/Payme) models exist; provider callbacks are not wired yet.
+- CORS defaults to `*` (Bearer JWT; no cookies).

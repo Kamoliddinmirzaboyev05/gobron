@@ -34,6 +34,7 @@ from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from bot.regions import REGIONS
 from bot.reminders import reminder_loop
+from bot.maintenance_loop import maintenance_loop
 
 logging.basicConfig(level=logging.INFO)
 
@@ -149,12 +150,14 @@ async def phone_retry(message: Message):
 
 async def main() -> None:
     bot = Bot(settings.TELEGRAM_BOT_TOKEN)
-    # Held in a local so the task is not garbage-collected mid-flight.
+    # Held in locals so the tasks are not garbage-collected mid-flight.
     reminders = asyncio.create_task(reminder_loop())
+    maintenance = asyncio.create_task(maintenance_loop())
     try:
         await dp.start_polling(bot)
     finally:
         reminders.cancel()
+        maintenance.cancel()
 
 
 if __name__ == "__main__":

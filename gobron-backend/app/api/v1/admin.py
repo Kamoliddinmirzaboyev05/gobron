@@ -19,7 +19,12 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.banner import BannerCreate, BannerOut, BannerUpdate
 from app.schemas.booking import AdminBookingOut
 from app.schemas.broadcast import BroadcastCreate, BroadcastOut
-from app.schemas.field_owner import FieldOwnerCreate, FieldOwnerOut, FieldOwnerUpdate
+from app.schemas.field_owner import (
+    FieldOwnerAdminOut,
+    FieldOwnerCreate,
+    FieldOwnerOut,
+    FieldOwnerUpdate,
+)
 from app.schemas.user import UserOut
 from app.schemas.subscription import SubscriptionPaymentAdminOut
 from app.services.broadcast_service import BroadcastService
@@ -64,8 +69,16 @@ async def get_user(user_id: int, db: DBSession):
 
 
 @router.post("/users/{user_id}/block", response_model=UserOut)
-async def block_user(user_id: int, db: DBSession):
+async def block_user(
+    user_id: int,
+    db: DBSession,
+    actor: User = Depends(_superadmin),
+):
     user = await _get_user(user_id, db)
+    if user.id == actor.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "O'zingizni bloklab bo'lmaydi")
+    if user.role == UserRole.SUPERADMIN:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Superadminni bloklab bo'lmaydi")
     user.is_blocked = True
     await db.commit()
     await db.refresh(user)
@@ -82,8 +95,17 @@ async def unblock_user(user_id: int, db: DBSession):
 
 
 @router.patch("/users/{user_id}/role", response_model=UserOut)
-async def set_role(user_id: int, role: UserRole, db: DBSession):
+async def set_role(
+    user_id: int,
+    role: UserRole,
+    db: DBSession,
+    actor: User = Depends(_superadmin),
+):
     user = await _get_user(user_id, db)
+    if user.id == actor.id and role != UserRole.SUPERADMIN:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "O'zingizning superadmin rolini olib tashlab bo'lmaydi"
+        )
     user.role = role
     await db.commit()
     await db.refresh(user)
@@ -91,8 +113,16 @@ async def set_role(user_id: int, role: UserRole, db: DBSession):
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, db: DBSession):
+async def delete_user(
+    user_id: int,
+    db: DBSession,
+    actor: User = Depends(_superadmin),
+):
     user = await _get_user(user_id, db)
+    if user.id == actor.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "O'zingizni o'chirib bo'lmaydi")
+    if user.role == UserRole.SUPERADMIN:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Superadminni o'chirib bo'lmaydi")
     await db.delete(user)
     await db.commit()
 
@@ -100,10 +130,81 @@ async def delete_user(user_id: int, db: DBSession):
 # --- Field owner profiles ---
 
 
-@router.get("/field-owners", response_model=list[FieldOwnerOut])
+async def _ensure_owner_profiles(db) -> None:
+    """Backfill field_owners rows for users with FIELD_OWNER role.
+
+    Phone-register historically created only the User row; the admin list
+    reads field_owners, so without this the page looks empty.
+    """
+    existing_user_ids = set(
+        (
+            await db.execute(select(FieldOwner.user_id))
+        )
+        .scalars()
+        .all()
+    )
+    owners = (
+        await db.execute(select(User).where(User.role == UserRole.FIELD_OWNER))
+    ).scalars().all()
+    created = False
+    for user in owners:
+        if user.id in existing_user_ids:
+            continue
+        name = (user.full_name or user.first_name or user.phone or f"Owner #{user.id}").strip()
+        db.add(
+            FieldOwner(
+                user_id=user.id,
+                business_name=name[:150],
+                contact_phone=user.phone,
+                is_verified=False,
+            )
+        )
+        created = True
+    if created:
+        await db.commit()
+
+
+async def _owner_admin_card(db, profile: FieldOwner, user: User | None) -> FieldOwnerAdminOut:
+    fields = list(
+        (
+            await db.execute(
+                select(Field)
+                .where(Field.owner_id == profile.user_id)
+                .order_by(Field.id.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    u = user
+    return FieldOwnerAdminOut(
+        id=profile.id,
+        user_id=profile.user_id,
+        business_name=profile.business_name,
+        contact_phone=profile.contact_phone,
+        is_verified=profile.is_verified,
+        created_at=profile.created_at,
+        full_name=(u.full_name if u else "") or profile.business_name,
+        phone=(u.phone if u else None) or profile.contact_phone,
+        is_blocked=bool(u.is_blocked) if u else False,
+        is_active=bool(u.is_active) if u else True,
+        fields_count=len(fields),
+        active_fields_count=sum(1 for f in fields if f.is_active),
+        field_names=[f.name for f in fields[:5]],
+    )
+
+
+@router.get("/field-owners", response_model=list[FieldOwnerAdminOut])
 async def list_field_owners(db: DBSession, limit: int = Query(100, le=200)):
-    stmt = select(FieldOwner).order_by(FieldOwner.created_at.desc()).limit(limit)
-    return list((await db.execute(stmt)).scalars().all())
+    await _ensure_owner_profiles(db)
+    stmt = (
+        select(FieldOwner, User)
+        .outerjoin(User, User.id == FieldOwner.user_id)
+        .order_by(FieldOwner.created_at.desc())
+        .limit(limit)
+    )
+    rows = (await db.execute(stmt)).all()
+    return [await _owner_admin_card(db, profile, user) for profile, user in rows]
 
 
 async def _get_field_owner(field_owner_id: int, db) -> FieldOwner:
@@ -114,33 +215,45 @@ async def _get_field_owner(field_owner_id: int, db) -> FieldOwner:
 
 
 @router.post(
-    "/field-owners", response_model=FieldOwnerOut, status_code=status.HTTP_201_CREATED
+    "/field-owners", response_model=FieldOwnerAdminOut, status_code=status.HTTP_201_CREATED
 )
 async def create_field_owner(body: FieldOwnerCreate, db: DBSession):
+    user = await db.get(User, body.user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if user.role != UserRole.FIELD_OWNER:
+        user.role = UserRole.FIELD_OWNER
+    existing = (
+        await db.execute(select(FieldOwner).where(FieldOwner.user_id == body.user_id))
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Bu foydalanuvchida profil bor")
     owner = FieldOwner(**body.model_dump())
     db.add(owner)
     await db.commit()
     await db.refresh(owner)
-    return owner
+    return await _owner_admin_card(db, owner, user)
 
 
-@router.patch("/field-owners/{field_owner_id}", response_model=FieldOwnerOut)
+@router.patch("/field-owners/{field_owner_id}", response_model=FieldOwnerAdminOut)
 async def update_field_owner(field_owner_id: int, body: FieldOwnerUpdate, db: DBSession):
     owner = await _get_field_owner(field_owner_id, db)
     for key, value in body.model_dump(exclude_unset=True).items():
         setattr(owner, key, value)
     await db.commit()
     await db.refresh(owner)
-    return owner
+    user = await db.get(User, owner.user_id)
+    return await _owner_admin_card(db, owner, user)
 
 
-@router.post("/field-owners/{field_owner_id}/verify", response_model=FieldOwnerOut)
+@router.post("/field-owners/{field_owner_id}/verify", response_model=FieldOwnerAdminOut)
 async def verify_field_owner(field_owner_id: int, db: DBSession):
     owner = await _get_field_owner(field_owner_id, db)
     owner.is_verified = True
     await db.commit()
     await db.refresh(owner)
-    return owner
+    user = await db.get(User, owner.user_id)
+    return await _owner_admin_card(db, owner, user)
 
 
 @router.delete("/field-owners/{field_owner_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -150,81 +263,95 @@ async def delete_field_owner(field_owner_id: int, db: DBSession):
     await db.commit()
 
 
-@router.post("/field-owners/{field_owner_id}/toggle-active", response_model=FieldOwnerOut)
+@router.post(
+    "/field-owners/{field_owner_id}/toggle-active", response_model=FieldOwnerAdminOut
+)
 async def toggle_field_owner_fields(field_owner_id: int, db: DBSession):
     owner = await _get_field_owner(field_owner_id, db)
-    # Get all fields for this owner's user ID
     user_fields = await db.execute(select(Field).where(Field.owner_id == owner.user_id))
-    fields = user_fields.scalars().all()
-    
-    # Toggle isActive based on first field or just turn them off
-    # Actually just deactivate them if active, activate if inactive
-    if not fields:
-        return owner
-    
-    current_active = fields[0].is_active
-    new_active = not current_active
-    for f in fields:
-        f.is_active = new_active
-        
-    await db.commit()
-    return owner
+    fields = list(user_fields.scalars().all())
+    if fields:
+        new_active = not fields[0].is_active
+        for f in fields:
+            f.is_active = new_active
+        await db.commit()
+    user = await db.get(User, owner.user_id)
+    return await _owner_admin_card(db, owner, user)
 
 
 # --- Subscription Payments ---
 
 @router.get("/subscription-payments", response_model=list[SubscriptionPaymentAdminOut])
 async def list_subscription_payments(db: DBSession, limit: int = Query(100, le=200)):
-    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).order_by(SubscriptionPayment.created_at.desc()).limit(limit)
+    stmt = (
+        select(SubscriptionPayment, User)
+        .join(User, SubscriptionPayment.owner_id == User.id)
+        .order_by(SubscriptionPayment.created_at.desc())
+        .limit(limit)
+    )
     rows = (await db.execute(stmt)).all()
-    
-    result = []
-    for payment, user in rows:
-        payment_dict = payment.__dict__.copy()
-        payment_dict["owner_phone"] = user.phone
-        payment_dict["owner_name"] = user.full_name or user.first_name
-        result.append(payment_dict)
-    return result
+    return [_payment_admin_dict(payment, user) for payment, user in rows]
+
+def _payment_admin_dict(payment: SubscriptionPayment, user: User) -> dict:
+    return {
+        "id": payment.id,
+        "owner_id": payment.owner_id,
+        "amount": payment.amount,
+        "receipt_image": payment.receipt_image,
+        "status": payment.status,
+        "created_at": payment.created_at,
+        "updated_at": payment.updated_at,
+        "owner_phone": user.phone,
+        "owner_name": user.full_name or user.first_name,
+    }
+
 
 @router.post("/subscription-payments/{payment_id}/approve", response_model=SubscriptionPaymentAdminOut)
 async def approve_subscription_payment(payment_id: int, db: DBSession):
-    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).where(SubscriptionPayment.id == payment_id)
+    stmt = (
+        select(SubscriptionPayment, User)
+        .join(User, SubscriptionPayment.owner_id == User.id)
+        .where(SubscriptionPayment.id == payment_id)
+    )
     row = (await db.execute(stmt)).first()
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
-        
+
     payment, user = row
+    if payment.status == "approved":
+        return _payment_admin_dict(payment, user)
+    if payment.status == "rejected":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Rad etilgan to'lovni tasdiqlab bo'lmaydi")
+
     payment.status = "approved"
-    
-    # Optionally, activate their fields
+    # Unlock the owner's fields after subscription is paid.
     user_fields = await db.execute(select(Field).where(Field.owner_id == user.id))
     for f in user_fields.scalars().all():
         f.is_active = True
-        
+
     await db.commit()
     await db.refresh(payment)
-    
-    payment_dict = payment.__dict__.copy()
-    payment_dict["owner_phone"] = user.phone
-    payment_dict["owner_name"] = user.full_name or user.first_name
-    return payment_dict
+    return _payment_admin_dict(payment, user)
+
 
 @router.post("/subscription-payments/{payment_id}/reject", response_model=SubscriptionPaymentAdminOut)
 async def reject_subscription_payment(payment_id: int, db: DBSession):
-    stmt = select(SubscriptionPayment, User).join(User, SubscriptionPayment.owner_id == User.id).where(SubscriptionPayment.id == payment_id)
+    stmt = (
+        select(SubscriptionPayment, User)
+        .join(User, SubscriptionPayment.owner_id == User.id)
+        .where(SubscriptionPayment.id == payment_id)
+    )
     row = (await db.execute(stmt)).first()
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment not found")
-        
+
     payment, user = row
+    if payment.status == "approved":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Tasdiqlangan to'lovni rad etib bo'lmaydi")
     payment.status = "rejected"
     await db.commit()
     await db.refresh(payment)
-    
-    payment_dict = payment.__dict__.copy()
-    payment_dict["owner_phone"] = user.phone
-    payment_dict["owner_name"] = user.full_name or user.first_name
-    return payment_dict
+    return _payment_admin_dict(payment, user)
 
 
 # --- Bookings (all users) ---

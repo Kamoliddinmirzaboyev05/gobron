@@ -32,6 +32,11 @@ def _service() -> BookingService:
     return BookingService.__new__(BookingService)
 
 
+class _EmptyResult:
+    def scalar_one_or_none(self):
+        return None
+
+
 class FakeBookingDB:
     """Just enough of an AsyncSession for create_booking's ONCE/multi-slot path."""
 
@@ -43,6 +48,10 @@ class FakeBookingDB:
 
     async def refresh(self, _obj):
         pass
+
+    async def execute(self, _stmt):
+        # No manual bookings in unit tests.
+        return _EmptyResult()
 
 
 @pytest.mark.asyncio

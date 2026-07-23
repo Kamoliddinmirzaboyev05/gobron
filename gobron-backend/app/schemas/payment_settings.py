@@ -8,6 +8,7 @@ class PaymentSettingsIn(BaseModel):
     card_number: str = Field(..., max_length=32)
     card_holder: str = Field(..., min_length=1, max_length=150)
     bank_name: str | None = Field(None, max_length=100)
+    subscription_amount: float = Field(50_000, ge=1000, le=50_000_000)
 
     @field_validator("card_number")
     @classmethod
@@ -25,3 +26,4 @@ class PaymentSettingsOut(BaseModel):
     card_number: str
     card_holder: str
     bank_name: str | None
+    subscription_amount: float
