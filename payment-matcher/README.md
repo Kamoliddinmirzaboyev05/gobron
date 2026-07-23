@@ -18,9 +18,13 @@ cd payment-matcher
 cp .env.example .env
 # fill TELEGRAM_API_ID / API_HASH from https://my.telegram.org/apps
 # DATABASE_URL = same Postgres as gobron-backend
+# HUMO_BOT_USERNAME=HUMOcardbot   ← notifications from @HUMOcardbot
 npm install
 npm run dev
 ```
+
+**Critical:** the Telegram userbot account must be the one that **receives**
+@HUMOcardbot (or Humo bank) payment notifications for the receiving card.
 
 First run: enter phone + code. Copy printed `TELEGRAM_SESSION` into `.env`.
 

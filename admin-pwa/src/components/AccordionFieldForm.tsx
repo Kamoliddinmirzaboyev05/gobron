@@ -101,7 +101,27 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
     setAmenities((prev) => (prev.includes(key) ? prev.filter((a) => a !== key) : [...prev, key]))
   }
 
-  /** Native geolocation — no map library, no API key. Needs HTTPS. */
+  function buildFieldPayload(lat?: number, lon?: number): Omit<Field, 'id' | 'venueId'> {
+    return {
+      name: name.trim(),
+      size: length.trim() && width.trim() ? `${length.trim()}x${width.trim()}` : undefined,
+      pricePerHour: Number(price) || 0,
+      phone: phone ? toE164(phone) : undefined,
+      address: address.trim() || undefined,
+      latitude: lat,
+      longitude: lon,
+      openingTime,
+      closingTime,
+      amenities,
+      surfaceType,
+      images,
+      peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
+      isActive,
+      bookingWindowDays: Number(bookingWindowDays) || 3,
+    }
+  }
+
+  /** Geolocation → lat/lon inputlar; mavjud maydon bo'lsa darhol API ga yoziladi. */
   function detectLocation() {
     if (!('geolocation' in navigator)) {
       setLocateError("Brauzer joylashuvni aniqlay olmaydi")
@@ -110,9 +130,20 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
     setLocating(true)
     setLocateError('')
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude })
+      async (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6))
+        const lon = Number(pos.coords.longitude.toFixed(6))
+        setCoords({ lat, lon })
         setLocating(false)
+
+        // Mavjud maydon: formani yubormasdan ham doimiy saqlash
+        if (existingField?.id && !isNew && name.trim()) {
+          try {
+            await updateField(existingField.id, buildFieldPayload(lat, lon))
+          } catch {
+            setLocateError("Joylashuv aniqlangan, lekin saqlanmadi. «Saqlash»ni bosing.")
+          }
+        }
       },
       (err) => {
         setLocateError(
@@ -122,7 +153,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
         )
         setLocating(false)
       },
-      { enableHighAccuracy: true, timeout: 10_000 },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     )
   }
 
@@ -141,23 +172,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
     e.preventDefault()
     if (!validate()) return
 
-    const field: Omit<Field, 'id' | 'venueId'> = {
-      name: name.trim(),
-      size: length.trim() && width.trim() ? `${length.trim()}x${width.trim()}` : undefined,
-      pricePerHour: Number(price),
-      phone: phone ? toE164(phone) : undefined,
-      address: address.trim() || undefined,
-      latitude: coords.lat,
-      longitude: coords.lon,
-      openingTime,
-      closingTime,
-      amenities,
-      surfaceType,
-      images,
-      peakPriceMultiplier: existingField?.peakPriceMultiplier ?? 1.0,
-      isActive,
-      bookingWindowDays: Number(bookingWindowDays),
-    }
+    const field = buildFieldPayload(coords.lat, coords.lon)
 
     setSaving(true)
     try {
@@ -302,6 +317,49 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
               onChange={(e) => setAddress(e.target.value)}
             />
 
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Latitude (lat)
+                </label>
+                <input
+                  className="input-field font-mono text-sm"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  placeholder="40.386596"
+                  value={coords.lat ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setCoords((c) => ({
+                      ...c,
+                      lat: v === '' ? undefined : Number(v),
+                    }))
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Longitude (lon)
+                </label>
+                <input
+                  className="input-field font-mono text-sm"
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  placeholder="71.787753"
+                  value={coords.lon ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setCoords((c) => ({
+                      ...c,
+                      lon: v === '' ? undefined : Number(v),
+                    }))
+                  }}
+                />
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={detectLocation}
@@ -314,7 +372,7 @@ export default function AccordionFieldForm({ field: existingField, onSaved, onCa
 
             {coords.lat != null && coords.lon != null && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                📍 {coords.lat.toFixed(6)}, {coords.lon.toFixed(6)}
+                📍 {Number(coords.lat).toFixed(6)}, {Number(coords.lon).toFixed(6)}
               </p>
             )}
             {locateError && <p className="text-red-500 text-xs mt-1">{locateError}</p>}

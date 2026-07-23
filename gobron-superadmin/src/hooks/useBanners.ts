@@ -14,6 +14,8 @@ export function useBanners() {
 
 export type BannerInput = {
   image_url: string;
+  title?: string | null;
+  description?: string | null;
   link?: string | null;
   sort_order?: number;
   is_active?: boolean;

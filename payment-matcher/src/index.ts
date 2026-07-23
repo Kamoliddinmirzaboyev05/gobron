@@ -1,27 +1,28 @@
 /**
- * Payment Matcher Service — entrypoint.
- *
- * Wires: config → DB → Humo userbot listener → parser → order matcher.
- * Also runs a lightweight expire tick so pending intents do not stick forever
- * if the API is idle.
+ * Payment Matcher — load DB settings (incl. 2FA), then start Humo userbot.
  */
 import { config } from "./config/index.js";
 import { pool } from "./db/pool.js";
 import { logger } from "./utils/logger.js";
 import { startUserbot } from "./services/telegramUserbot.js";
 import { expireStaleIntents } from "./services/orderMatcher.js";
+import { loadMatcherSettingsFromDb } from "./services/settingsLoader.js";
 
 const EXPIRE_EVERY_MS = 60_000;
 
 async function main(): Promise<void> {
-  logger.info("Payment Matcher starting", {
-    humoBots: config.humoBots,
-    ttlMinutes: config.paymentTtlMinutes,
-  });
+  logger.info("Payment Matcher starting");
 
-  // Fail fast if DB is unreachable
   await pool.query("SELECT 1");
   logger.info("database connected");
+
+  await loadMatcherSettingsFromDb();
+
+  if (!config.telegram.apiId || !config.telegram.apiHash) {
+    throw new Error(
+      "Telegram API sozlanmagan. Superadmin → Humo to'lovlar → Telegram 2FA bo'limini to'ldiring.",
+    );
+  }
 
   const client = await startUserbot();
 
@@ -47,13 +48,8 @@ async function main(): Promise<void> {
 
   process.on("SIGINT", () => void shutdown("SIGINT"));
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
-
-  // Keep process alive; GramJS holds the connection.
   process.on("unhandledRejection", (err) => {
     logger.error("unhandledRejection", { err: String(err) });
-  });
-  process.on("uncaughtException", (err) => {
-    logger.error("uncaughtException", { err: String(err) });
   });
 }
 

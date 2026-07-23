@@ -27,9 +27,11 @@ function normalizeText(text: string): string {
  */
 const AMOUNT_PATTERNS: RegExp[] = [
   // Prefer amount + currency (most reliable; avoids matching dates after "o'tkazildi")
-  /([+\-]?\d[\d\s.,]*)\s*(?:so['']?m|uzs|сум)\b/i,
-  // "Summa: 50 014" / "Miqdor: 50014" labels only (no o'tkazildi — that eats dates)
-  /(?:summa|miqdor|amount|to['']?lov)[:\s]+([+\-]?\d[\d\s.,]*)/i,
+  /([+\-]?\d[\d\s.,]*)\s*(?:so['']?m|uzs|сум|sum)\b/i,
+  // HUMOcardbot / bank labels (UZ + RU)
+  /(?:summa|miqdor|amount|to['']?lov|пополнение|приход|зачислено|перевод|баланс)[:\s]+([+\-]?\d[\d\s.,]*)/i,
+  // "+50 014" credit style often used by card bots
+  /(?:^|\s)\+([0-9][\d\s.,]*)/,
   // Fallback: thousand-grouped number only (not bare 12.07.2026)
   /(\d{1,3}(?:[\s,]\d{3}){1,})/,
 ];

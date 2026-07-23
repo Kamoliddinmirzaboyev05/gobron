@@ -1,5 +1,6 @@
 /**
- * Home hero carousel — admin banners via Swiper, or branded fallback slides.
+ * Home hero carousel — admin posters with title/description overlay,
+ * or branded fallback slides when no banners.
  */
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination, EffectFade } from "swiper/modules";
@@ -35,47 +36,78 @@ const FALLBACK = [
   },
 ];
 
+function BannerSlideContent({ banner }: { banner: Banner }) {
+  const hasText = Boolean(banner.title?.trim() || banner.description?.trim());
+
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      <img
+        src={banner.image_url}
+        alt={banner.title ?? "Poster"}
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable={false}
+      />
+
+      {/* Depth gradients */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/10" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/50 to-transparent" />
+
+      {/* Text + description glass panel */}
+      {hasText ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-[3.25rem] pt-16">
+          <div className="hero-caption max-w-[92%]">
+            {banner.title?.trim() && (
+              <h2 className="text-[1.35rem] font-extrabold leading-[1.15] tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)] sm:text-[1.5rem]">
+                {banner.title.trim()}
+              </h2>
+            )}
+            {banner.description?.trim() && (
+              <p className="mt-1.5 line-clamp-2 text-[13px] font-medium leading-snug text-white/90 drop-shadow-[0_1px_4px_rgba(0,0,0,0.4)] sm:text-sm">
+                {banner.description.trim()}
+              </p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="pointer-events-none absolute bottom-14 left-4 z-10">
+          <span className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
+            Gobron
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HeroSlider({ banners }: { banners?: Banner[] }) {
   const hasBanners = !!banners && banners.length > 0;
 
   return (
-    <section className="relative h-[280px] overflow-hidden sm:h-[300px]">
+    <section className="relative h-[300px] overflow-hidden sm:h-[320px]">
       {hasBanners ? (
         <Swiper
           modules={[Autoplay, Pagination, EffectFade]}
           effect="fade"
           fadeEffect={{ crossFade: true }}
-          autoplay={{ delay: 4500, disableOnInteraction: false }}
-          pagination={{ clickable: true, dynamicBullets: true }}
+          autoplay={{ delay: 4800, disableOnInteraction: false, pauseOnMouseEnter: true }}
+          pagination={{ clickable: true }}
           loop={banners.length > 1}
           className="hero-swiper h-full w-full"
         >
           {banners.map((b) => (
             <SwiperSlide key={b.id}>
-              <div className="relative h-full w-full">
-                {b.link ? (
-                  <a href={b.link} target="_blank" rel="noreferrer" className="block h-full w-full">
-                    <img
-                      src={b.image_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </a>
-                ) : (
-                  <img
-                    src={b.image_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                )}
-                {/* Soft bottom fade for search overlap */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-black/20" />
-                <div className="pointer-events-none absolute bottom-14 left-5 right-5">
-                  <span className="inline-flex rounded-full border border-white/20 bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
-                    Gobron poster
-                  </span>
-                </div>
-              </div>
+              {b.link ? (
+                <a
+                  href={b.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block h-full w-full"
+                >
+                  <BannerSlideContent banner={b} />
+                </a>
+              ) : (
+                <BannerSlideContent banner={b} />
+              )}
             </SwiperSlide>
           ))}
         </Swiper>
@@ -116,8 +148,8 @@ export default function HeroSlider({ banners }: { banners?: Banner[] }) {
         </Swiper>
       )}
 
-      {/* Bottom curve into page */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-8 rounded-t-[1.75rem] bg-gray-50" />
+      {/* Soft curve into page content */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-7 rounded-t-[1.75rem] bg-gray-50" />
     </section>
   );
 }

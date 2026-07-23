@@ -18,6 +18,7 @@ from app.models.user import User
 from app.utils.amount_generator import generate_unique_amount
 
 _ROW_ID = 1
+# Match product UX: user must pay within ~7–15 min; 15 is safer for bank lag.
 _TTL_MINUTES = 15
 
 

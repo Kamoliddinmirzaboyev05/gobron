@@ -92,6 +92,8 @@ export const bookingResultSchema = z.object({
 export const bannerSchema = z.object({
   id: z.number(),
   image_url: z.string(),
+  title: z.string().nullable().optional().default(null),
+  description: z.string().nullable().optional().default(null),
   link: z.string().nullable(),
   sort_order: z.number(),
   is_active: z.boolean(),
